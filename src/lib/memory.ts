@@ -1,8 +1,9 @@
-// 别装记忆系统 — 四层架构
+// 别装记忆系统 — 五层架构
 // L1: 原始记录（每次交互）
-// L2: 行为画像（模式提取）
-// L3: 承诺追踪（言行矛盾检测）
-// L4: 用户灵魂画像（soul_user）
+// L2: 消费画像（模式提取）
+// L3: 承诺追踪（消费言行矛盾检测）
+// L4: 用户消费灵魂画像（soul_user）
+// L5: 消费流水（结构化消费记录）
 
 export interface MemoryEntry {
   id: string;
@@ -12,13 +13,25 @@ export interface MemoryEntry {
   aiResponse: string;
   imageDescription?: string;
   extractedInsights?: string[];
+  location?: string;
 }
 
 export interface BehaviorPattern {
-  category: "eating" | "activity" | "spending" | "mood" | "social";
+  category: "impulse" | "emotional" | "social" | "habitual" | "rational";
   pattern: string;
   count: number;
   lastSeen: string;
+}
+
+export interface SpendingRecord {
+  id: string;
+  amount: number;
+  category: "food" | "coffee" | "shopping" | "transport" | "entertainment" | "daily" | "other";
+  motive: "need" | "emotional" | "impulse" | "social" | "habitual" | "reward";
+  timestamp: string;
+  location?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface Commitment {
@@ -30,10 +43,19 @@ export interface Commitment {
 }
 
 export interface UserTrait {
-  category: "language" | "excuse" | "fear" | "desire" | "contradiction" | "habit";
+  category: "spending_trigger" | "excuse" | "fear" | "desire" | "contradiction" | "persona";
   description: string;
   firstSeen: string;
   count: number;
+}
+
+export interface TriggerChain {
+  id: string;
+  trigger: string;    // "被甲方骂了"
+  behavior: string;   // "点瑞幸"
+  count: number;
+  firstSeen: string;
+  lastSeen: string;
 }
 
 export interface UserProfile {
@@ -44,10 +66,13 @@ export interface UserProfile {
   patterns: BehaviorPattern[];
   commitments: Commitment[];
   traits: UserTrait[];
+  spendings: SpendingRecord[];
+  triggerChains: TriggerChain[];
   stats: {
     totalInteractions: number;
     daysActive: number;
     photosShared: number;
+    totalSpent: number;
   };
 }
 
@@ -78,10 +103,13 @@ export function createProfile(name: string, gender: "male" | "female" | "other" 
     patterns: [],
     commitments: [],
     traits: [],
+    spendings: [],
+    triggerChains: [],
     stats: {
       totalInteractions: 0,
       daysActive: 1,
       photosShared: 0,
+      totalSpent: 0,
     },
   };
   saveProfile(profile);
@@ -141,10 +169,10 @@ export function addPattern(
   category: string,
   description: string
 ): UserProfile {
-  const validCategories = ["eating", "activity", "spending", "mood", "social"] as const;
+  const validCategories = ["impulse", "emotional", "social", "habitual", "rational"] as const;
   const cat = validCategories.includes(category as typeof validCategories[number])
     ? (category as typeof validCategories[number])
-    : "mood";
+    : "habitual";
 
   const existing = profile.patterns.find(
     (p) => p.category === cat && p.pattern === description
@@ -170,10 +198,10 @@ export function addUserTrait(
   description: string
 ): UserProfile {
   if (!profile.traits) profile.traits = [];
-  const validCategories = ["language", "excuse", "fear", "desire", "contradiction", "habit"] as const;
+  const validCategories = ["spending_trigger", "excuse", "fear", "desire", "contradiction", "persona"] as const;
   const cat = validCategories.includes(category as typeof validCategories[number])
     ? (category as typeof validCategories[number])
-    : "habit";
+    : "excuse";
 
   const existing = profile.traits.find(
     (t) => t.category === cat && t.description === description
@@ -186,6 +214,64 @@ export function addUserTrait(
       description,
       firstSeen: new Date().toISOString(),
       count: 1,
+    });
+  }
+  saveProfile(profile);
+  return profile;
+}
+
+export function addSpending(
+  profile: UserProfile,
+  amount: number,
+  category: string,
+  motive: string,
+  location?: string,
+  lat?: number,
+  lng?: number
+): UserProfile {
+  if (!profile.spendings) profile.spendings = [];
+  const validCategories = ["food", "coffee", "shopping", "transport", "entertainment", "daily", "other"] as const;
+  const validMotives = ["need", "emotional", "impulse", "social", "habitual", "reward"] as const;
+  const cat = validCategories.includes(category as typeof validCategories[number])
+    ? (category as typeof validCategories[number]) : "other";
+  const mot = validMotives.includes(motive as typeof validMotives[number])
+    ? (motive as typeof validMotives[number]) : "impulse";
+
+  profile.spendings.push({
+    id: crypto.randomUUID(),
+    amount,
+    category: cat,
+    motive: mot,
+    timestamp: new Date().toISOString(),
+    ...(location ? { location } : {}),
+    ...(lat != null && lng != null ? { lat, lng } : {}),
+  });
+  if (!profile.stats.totalSpent) profile.stats.totalSpent = 0;
+  profile.stats.totalSpent += amount;
+  saveProfile(profile);
+  return profile;
+}
+
+export function addTriggerChain(
+  profile: UserProfile,
+  trigger: string,
+  behavior: string
+): UserProfile {
+  if (!profile.triggerChains) profile.triggerChains = [];
+  const existing = profile.triggerChains.find(
+    (tc) => tc.trigger === trigger && tc.behavior === behavior
+  );
+  if (existing) {
+    existing.count += 1;
+    existing.lastSeen = new Date().toISOString();
+  } else {
+    profile.triggerChains.push({
+      id: crypto.randomUUID(),
+      trigger,
+      behavior,
+      count: 1,
+      firstSeen: new Date().toISOString(),
+      lastSeen: new Date().toISOString(),
     });
   }
   saveProfile(profile);
@@ -205,7 +291,26 @@ export function buildMemoryContext(profile: UserProfile): string {
   context += `性别代词：${pronoun}（请始终使用这个代词）\n`;
   context += `使用天数：${profile.stats.daysActive}\n`;
   context += `总交互次数：${profile.stats.totalInteractions}\n`;
-  context += `分享照片数：${profile.stats.photosShared}\n\n`;
+  context += `分享照片数：${profile.stats.photosShared}\n`;
+  context += `累计消费记录：¥${profile.stats.totalSpent || 0}\n\n`;
+
+  // 本周消费汇总
+  const spendings = profile.spendings || [];
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const weekSpendings = spendings.filter((s) => s.timestamp > weekAgo);
+  if (weekSpendings.length > 0) {
+    const weekTotal = weekSpendings.reduce((sum, s) => sum + s.amount, 0);
+    const emotionalCount = weekSpendings.filter((s) => s.motive === "emotional" || s.motive === "impulse" || s.motive === "reward").length;
+    context += `## 本周消费概况\n`;
+    context += `本周消费 ${weekSpendings.length} 笔，总计 ¥${weekTotal}\n`;
+    context += `其中情绪/冲动/自我奖励消费 ${emotionalCount} 笔\n`;
+    const locationSpendings = weekSpendings.filter((s) => s.location);
+    if (locationSpendings.length > 0) {
+      const locations = [...new Set(locationSpendings.map((s) => s.location))];
+      context += `消费地点涉及：${locations.join("、")}\n`;
+    }
+    context += `\n`;
+  }
 
   if (recentMemories.length > 0) {
     context += `## 最近记录（最近${recentMemories.length}条）\n`;
@@ -238,9 +343,18 @@ export function buildMemoryContext(profile: UserProfile): string {
   }
 
   if (profile.traits && profile.traits.length > 0) {
-    context += `## 用户灵魂画像（Nick 对用户的深层认知）\n`;
+    context += `## 用户消费画像（Nick 对用户消费性格的认知）\n`;
     for (const t of profile.traits) {
       context += `- [${t.category}] ${t.description}（观察到${t.count}次）\n`;
+    }
+    context += `\n`;
+  }
+
+  const chains = profile.triggerChains || [];
+  if (chains.length > 0) {
+    context += `## 情绪消费链（已识别的"触发→行为"模式）\n`;
+    for (const tc of chains) {
+      context += `- "${tc.trigger}" → "${tc.behavior}"（出现${tc.count}次）\n`;
     }
     context += `\n`;
   }

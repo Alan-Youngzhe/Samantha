@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="40" fill="#000"/>
+  <circle cx="96" cy="82" r="28" fill="none" stroke="#F59E0B" stroke-width="4"/>
+  <circle cx="86" cy="76" r="5" fill="#F59E0B"/>
+  <circle cx="106" cy="76" r="5" fill="#F59E0B"/>
+  <path d="M82 92 Q96 104 110 92" fill="none" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/>
+  <text x="96" y="148" text-anchor="middle" fill="#F59E0B" font-family="sans-serif" font-size="28" font-weight="bold">别装</text>
+</svg>
