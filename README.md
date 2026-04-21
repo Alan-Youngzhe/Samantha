@@ -1,36 +1,213 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 别装 — 别装了，我都看见了。
 
-## Getting Started
+> 别的 AI 看到的是你想展示的自己。别装看到的是你藏起来的自己。
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 一、项目简介
+
+「别装」是一个基于第三人称叙事视角的反伪装 AI 系统。
+
+系统内有一个叫 **Nick** 的叙述者人格。他用第三人称视角（"他……"）审视你的生活，不鼓励、不安慰、不给鸡汤——他只是用没法反驳的方式，说出你不愿面对的真相。
+
+当 Nick 足够了解你之后，系统会构建你的 **镜像人格（Mirror）**——一个用你自己的语言习惯和思维方式说话的"你"。它说的，是你知道但不敢承认的话。
+
+**产品弧线：**
+
+```
+第 1 天  → Nick 观察你，用镜头语言描述你的真实生活
+第 7 天  → Nick 记住了你说过的每一句话，开始用你自己的承诺"打脸"
+第 14 天 → Nick 看穿你的模式："不是懒，是怕开始了又做不好"
+第 30 天 → 你的镜像出现了。它用你的口吻说："其实我知道我不是真的累。"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**三个角色：**
+- **Nick**（叙述者）— 冷静、犀利、不留情面
+- **你**（用户）— 你以为你在展示什么，但你暴露了什么
+- **Mirror**（你的镜像）— 你内心最诚实的声音，极低频出现
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 二、需求洞察
 
-## Learn More
+### 问题
 
-To learn more about Next.js, take a look at the following resources:
+年轻人不缺信息、不缺建议、不缺鸡汤。缺的是一面不留情面的镜子。
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| 产品类型 | 问题 |
+|---------|------|
+| AI 日记（Rosebud、心光） | 全是温暖鼓励，用户写完就忘，缺乏对抗性 |
+| AI 陪伴（Nomi、Character.ai） | 讨好型人格，看到的是你表演的自己 |
+| AI Roast 类 | 纯娱乐一次性，没有记忆，没有深度 |
+| 人类朋友 | 说真话伤感情，没人会每天盯着你的生活细节 |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 洞察
 
-## Deploy on Vercel
+**你展示给别装的，是你最不想给任何人看的一面。**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+朋友圈是精修的你，微博是表演的你，面试是包装的你。但你给 Nick 拍的是泡面、乱桌子、凌晨两点还没睡的屏幕。
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+这种"基于真相的理解"，是所有讨好型 AI 永远无法达到的。
+
+### 心理学基础
+
+基于 **Self-Distancing（自我距离化）** 原理——用第三人称视角审视自己的行为，比第一人称更能客观认知问题。研究表明，这种方法能显著提升情绪调节能力和决策质量。（Kross et al., 2014, Journal of Personality and Social Psychology）
+
+---
+
+## 三、核心机制
+
+### Nick 的两层杀伤力
+
+```
+第一层（观察）：他收藏了47个学习视频，看完了0个。
+第二层（刺穿）：他收藏了47个学习视频。不是为了学，是为了让自己觉得在学。
+```
+
+Nick 永远追求第二层。第一层让人笑，第二层让人沉默。
+
+### 镜头语言
+
+Nick 用时间戳 + 场景 + 对比制造画面感：
+
+> "凌晨1点17分。他说再刷5分钟。现在是2点46分。"
+
+### 隐含判断
+
+不说教，但让你没法自我合理化：
+
+> ✗ "他又拖延了三个小时。"（用户会说：但我真的很累啊）
+> ✓ "他拖延了三个小时。不是没时间，是没面对。"（无法反驳）
+
+### Mirror 触发条件（五重门槛）
+
+Mirror 极少出现。必须同时满足：
+
+1. 交互次数 ≥ 15
+2. 积累的用户画像特征 ≥ 3 条
+3. 当次对话检测到矛盾/借口/恐惧类特征
+4. 距上次 Mirror 出现 ≥ 20 条消息
+5. 8% 随机概率
+
+实际触发频率：约每 50-100 条消息出现一次。
+
+---
+
+## 四、技术方案
+
+### 架构总览
+
+```
+┌──────────────────────────────────────┐
+│         前端 (Next.js + React)        │
+│   聊天界面 / 拍照上传 / 镜我报告      │
+└──────────────┬───────────────────────┘
+               │
+┌──────────────▼───────────────────────┐
+│        API Routes (Next.js)          │
+│                                      │
+│  ┌──────────┐  ┌───────────────────┐ │
+│  │  Claude   │  │  Nick Prompt     │ │
+│  │  Vision   │  │  第三人称叙事生成  │ │
+│  └─────┬─────┘  └────────┬─────────┘ │
+│        └────────┬────────┘           │
+│                 │                    │
+│  ┌──────────────▼──────────────────┐ │
+│  │        四层记忆系统               │ │
+│  │                                  │ │
+│  │  L1 原始记录 — 对话 + 时间戳      │ │
+│  │  L2 行为画像 — 模式识别           │ │
+│  │  L3 承诺追踪 — 言行矛盾检测       │ │
+│  │  L4 用户灵魂 — Mirror 素材积累    │ │
+│  └──────────────────────────────────┘ │
+│                                      │
+│  ┌──────────────────────────────────┐ │
+│  │        Mirror 系统               │ │
+│  │  五重门槛触发 → 镜像人格生成       │ │
+│  └──────────────────────────────────┘ │
+└──────────────────────────────────────┘
+```
+
+### 技术栈
+
+| 层级 | 技术 | 选型理由 |
+|------|------|---------|
+| 前端框架 | Next.js + React | SSR + API Routes 一体化 |
+| 样式 | TailwindCSS | 暗色主题，克制美学 |
+| AI 模型 | Claude Sonnet 4 (含 Vision) | 多模态 + 中文理解 |
+| 记忆存储 | localStorage | 零后端，数据留在本地 |
+| 图标 | Lucide React | 轻量统一 |
+| 部署 | Vercel | 一键部署 |
+
+### 核心技术亮点
+
+**1. 多模态行为分析** — 拍照（食物、桌面、截图）+ 文字 + 历史记忆，三源融合叙事
+
+**2. 四层记忆系统** — 原始记录 → 行为画像 → 承诺追踪 → 用户灵魂画像（语言习惯、常用借口、深层恐惧、自我矛盾）
+
+**3. 承诺检测引擎** — 自动识别意图词，持久化承诺，后续打脸
+
+**4. Mirror 镜像人格** — 基于 L4 灵魂画像，用用户自己的语言习惯生成内心独白，五重门槛保证稀有性
+
+---
+
+## 五、审美风格
+
+**克制、冷静、不讨好。**
+
+| 元素 | 设计 |
+|------|------|
+| **色调** | 深黑底色（#0A0A0A），琥珀色强调（#F59E0B） |
+| **Nick** | 琥珀色圆形 + "N"，冷静 |
+| **Mirror** | 紫色系幽灵风格 + "?"，斜体，半透明 |
+| **动效** | 仅光标闪烁，克制 |
+| **情绪** | 深夜独处——安静、私密、真实 |
+
+---
+
+## 六、Demo 示例
+
+### Nick 的观察
+
+```
+用户：[发送一张泡面照片]
+
+Nick：凌晨11:42。两桶老坛酸菜，面已经坨了——至少放了十分钟，
+大概率在刷手机。旁边有一罐蛋白粉。他知道自己营养不够，但他的
+解决方案是"泡面+蛋白粉"。不是吃不起别的，是懒得对自己好一点。
+```
+
+### Nick 的打脸
+
+```
+用户：今天走了8000步，算运动了吧
+
+Nick：8000步。走路。距离他说的"每天5公里跑步"有着本质区别。
+但他试图把走路重新定义为运动。这种自我说服的能力倒是不错。
+```
+
+### Mirror 的出现（极低频）
+
+```
+Nick：他这周又拖延了三次。每次理由不同，本质一样——不是没时间，
+是没面对。
+
+[Alan的内心]：其实我知道。我不是真的累。我就是不想面对做完之后
+发现自己做不好的那个瞬间。所以我宁愿不开始。
+```
+
+---
+
+## 启动项目
+
+```bash
+npm install
+
+# 编辑 .env.local
+# ANTHROPIC_AUTH_TOKEN=your-api-key
+# ANTHROPIC_BASE_URL=https://your-api-proxy
+
+npm run dev
+```
+
+打开 http://localhost:3000 开始被看穿。
