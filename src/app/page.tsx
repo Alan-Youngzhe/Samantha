@@ -245,6 +245,7 @@ export default function Home() {
             hasMatchingSpending: (profile.spendings?.length || 0) > 0,
             hasLocationMatch: !!(locationInfo?.lat && locationInfo?.lng),
           } : null,
+          conversationRound: messages.filter(m => m.role === "user").length,
         }),
       });
 

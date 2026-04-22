@@ -28,10 +28,10 @@ function rid(): string {
 }
 
 // demo 用户的 trust 字段 — 模拟不同画像深度的用户
-function demoTrust(level: "high" | "mid" | "low"): Pick<ReviewRecord, "trustScore" | "verified" | "hasMatchingSpending" | "hasLocationMatch" | "profileDepth"> {
-  if (level === "high") return { trustScore: 82 + Math.floor(Math.random() * 10), verified: true, hasMatchingSpending: true, hasLocationMatch: true, profileDepth: 75 + Math.floor(Math.random() * 15) };
-  if (level === "mid") return { trustScore: 55 + Math.floor(Math.random() * 15), verified: false, hasMatchingSpending: true, hasLocationMatch: true, profileDepth: 40 + Math.floor(Math.random() * 20) };
-  return { trustScore: 20 + Math.floor(Math.random() * 15), verified: false, hasMatchingSpending: false, hasLocationMatch: false, profileDepth: 10 + Math.floor(Math.random() * 15) };
+function demoTrust(level: "high" | "mid" | "low"): Pick<ReviewRecord, "trustScore" | "verified" | "hasMatchingSpending" | "hasLocationMatch" | "profileDepth" | "motiveConfidence"> {
+  if (level === "high") return { trustScore: 82 + Math.floor(Math.random() * 10), verified: true, hasMatchingSpending: true, hasLocationMatch: true, profileDepth: 75 + Math.floor(Math.random() * 15), motiveConfidence: "high" };
+  if (level === "mid") return { trustScore: 55 + Math.floor(Math.random() * 15), verified: false, hasMatchingSpending: true, hasLocationMatch: true, profileDepth: 40 + Math.floor(Math.random() * 20), motiveConfidence: "medium" };
+  return { trustScore: 20 + Math.floor(Math.random() * 15), verified: false, hasMatchingSpending: false, hasLocationMatch: false, profileDepth: 10 + Math.floor(Math.random() * 15), motiveConfidence: "low" };
 }
 
 const DEMO_REVIEWS: ReviewRecord[] = [
@@ -150,7 +150,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { storeName, storeLocation, productName, category, price, sentiment, comment, motive, lat, lng, trustContext } = body;
+    const { storeName, storeLocation, productName, category, price, sentiment, comment, motive, motiveConfidence, lat, lng, trustContext } = body;
 
     if (!storeName || !productName || !price) {
       return NextResponse.json({ error: "missing required fields: storeName, productName, price" }, { status: 400 });
@@ -176,6 +176,7 @@ export async function POST(req: Request) {
       sentiment: sentiment || "neutral",
       comment: comment || "",
       motive: motive || "habitual",
+      motiveConfidence: (["high", "medium", "low"].includes(motiveConfidence) ? motiveConfidence : "medium") as "high" | "medium" | "low",
       lat: lat != null ? parseFloat(lat) : undefined,
       lng: lng != null ? parseFloat(lng) : undefined,
       hour: now.getHours(),

@@ -4,10 +4,11 @@
 import { UserProfile } from "./memory";
 
 const MIRROR_COOLDOWN_KEY = "bz-mirror-last";
-const MIN_INTERACTIONS = 15;
-const MIN_TRAITS = 3;
-const COOLDOWN_MESSAGES = 20;
-const TRIGGER_PROBABILITY = 0.08; // 8%
+const MIN_INTERACTIONS = 25;
+const MIN_TRAITS = 5;
+const MIN_DAYS_ACTIVE = 7;
+const COOLDOWN_MESSAGES = 25;
+const TRIGGER_PROBABILITY = 0.05; // 5%
 
 export interface MirrorTriggerResult {
   shouldTrigger: boolean;
@@ -15,12 +16,13 @@ export interface MirrorTriggerResult {
 }
 
 /**
- * 五重门槛检测：
- * 1. 交互数 ≥ 15
- * 2. traits ≥ 3
- * 3. 本次 Nick 回复检测到 contradiction 或 excuse 类 trait
- * 4. 距上次 mirror ≥ 20 条消息
- * 5. 随机 8%
+ * 六重门槛检测：
+ * 1. 交互数 ≥ 25
+ * 2. traits ≥ 5
+ * 3. 账号活跃天数 ≥ 7
+ * 4. 本次 Nick 回复检测到 contradiction 或 excuse 类 trait
+ * 5. 距上次 mirror ≥ 25 条消息
+ * 6. 随机 5%
  */
 export function checkMirrorTrigger(
   profile: UserProfile,
@@ -38,7 +40,12 @@ export function checkMirrorTrigger(
     return { shouldTrigger: false };
   }
 
-  // Gate 3: current response detected a contradiction or excuse
+  // Gate 3: account active for enough days
+  if ((profile.stats.daysActive || 0) < MIN_DAYS_ACTIVE) {
+    return { shouldTrigger: false };
+  }
+
+  // Gate 4: current response detected a contradiction or excuse
   if (!nickDetectedTrait) {
     return { shouldTrigger: false };
   }
@@ -47,7 +54,7 @@ export function checkMirrorTrigger(
     return { shouldTrigger: false };
   }
 
-  // Gate 4: cooldown
+  // Gate 5: cooldown
   if (typeof window !== "undefined") {
     const lastMirror = parseInt(localStorage.getItem(MIRROR_COOLDOWN_KEY) || "0", 10);
     if (currentMessageIndex - lastMirror < COOLDOWN_MESSAGES) {
@@ -55,7 +62,7 @@ export function checkMirrorTrigger(
     }
   }
 
-  // Gate 5: probability
+  // Gate 6: probability
   if (Math.random() > TRIGGER_PROBABILITY) {
     return { shouldTrigger: false };
   }
@@ -114,6 +121,8 @@ ${traitDescriptions}
 - 说出用户不敢对自己承认的消费真相
 - 不要讲道理，只是承认一个事实
 - 语气是认命式的诚实，不是自我批评
+- 不要用审判的语气。你是在叹气，不是在指责。
+- 如果某件事太敏感，可以说到一半停下来——"其实我……算了。"
 - 举例："其实我知道那杯奶茶不是因为渴。是因为刚被甲方骂了。"
 - 举例："我又说'犒劳自己'了。我自己都听腻了这个借口。"
 - 举例："每次说要省钱，我都觉得自己特认真。然后购物车又多了一件。"

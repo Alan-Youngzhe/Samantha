@@ -10,6 +10,7 @@ export interface ReviewRecord {
   sentiment: "positive" | "neutral" | "negative";
   comment: string;         // "比上次好喝"
   motive: string;          // emotional/impulse/habitual/social/need/reward
+  motiveConfidence: "high" | "medium" | "low"; // Nick 对动机推断的置信度
   lat?: number;
   lng?: number;
   hour: number;            // 0-23
@@ -56,6 +57,7 @@ export interface ProductSummary {
   motiveBreakdown: Record<string, number>;
   avgTrust: number;             // 平均可信度
   verifiedCount: number;        // 已验证评价数
+  highConfidenceCount: number;  // 高置信度评价数
 }
 
 function haversineDistance(
@@ -155,11 +157,16 @@ export function aggregateByStore(reviews: ReviewRecord[]): StoreSummary[] {
           .slice(0, 3)
           .map((r) => r.comment),
         motiveBreakdown: pRecs.reduce<Record<string, number>>((acc, r) => {
-          acc[r.motive] = (acc[r.motive] || 0) + 1;
+          // 低置信度动机不计入动机分布
+          if (r.motiveConfidence !== "low") acc[r.motive] = (acc[r.motive] || 0) + 1;
           return acc;
         }, {}),
-        avgTrust: Math.round(pRecs.reduce((s, r) => s + r.trustScore, 0) / pRecs.length),
+        avgTrust: Math.round(
+          pRecs.reduce((s, r) => s + r.trustScore * (r.motiveConfidence === "low" ? 0.3 : 1), 0) /
+          pRecs.reduce((s, r) => s + (r.motiveConfidence === "low" ? 0.3 : 1), 0)
+        ),
         verifiedCount: pRecs.filter((r) => r.verified).length,
+        highConfidenceCount: pRecs.filter((r) => r.motiveConfidence === "high").length,
       }))
       .sort((a, b) => b.reviewCount - a.reviewCount);
 
@@ -183,7 +190,11 @@ export function aggregateByStore(reviews: ReviewRecord[]): StoreSummary[] {
 export function buildNearbySummary(reviews: ReviewRecord[]): string {
   if (reviews.length === 0) return "";
 
-  const stores = aggregateByStore(reviews);
+  // 城市层摘要：排除低置信度评价
+  const credibleReviews = reviews.filter((r) => r.motiveConfidence !== "low");
+  if (credibleReviews.length === 0) return "";
+
+  const stores = aggregateByStore(credibleReviews);
   const lines: string[] = [];
 
   for (const store of stores.slice(0, 5)) {
@@ -195,14 +206,15 @@ export function buildNearbySummary(reviews: ReviewRecord[]): string {
     for (const p of store.topProducts.slice(0, 3)) {
       const comments = p.recentComments.filter(Boolean).slice(0, 2);
       const commentStr = comments.length > 0 ? `，有人说"${comments.join('"、"')}"` : "";
-      // Trust 标注
-      const trustLabel = p.avgTrust >= 70 ? "\uff08\u9ad8\u53ef\u4fe1\u5ea6\uff09" : p.avgTrust >= 40 ? "" : "\uff08\u53ef\u4fe1\u5ea6\u504f\u4f4e\uff09";
-      const verifiedLabel = p.verifiedCount > 0 ? `\uff0c${p.verifiedCount}\u4eba\u5df2\u56de\u8bbf\u9a8c\u8bc1` : "";
-      storeLine += `\n  - ${p.productName}：${p.reviewCount}人买过，均价¥${p.avgPrice}${trustLabel}${verifiedLabel}${commentStr}`;
+      // Trust + Confidence 标注
+      const trustLabel = p.avgTrust >= 70 ? "（高可信度）" : p.avgTrust >= 40 ? "" : "（可信度偏低）";
+      const verifiedLabel = p.verifiedCount > 0 ? `，${p.verifiedCount}人已回访验证` : "";
+      const confLabel = p.highConfidenceCount > 0 && p.reviewCount >= 2 ? `（基于${p.highConfidenceCount}条高置信度评价）` : "";
+      storeLine += `\n  - ${p.productName}：${p.reviewCount}人买过，均价¥${p.avgPrice}${trustLabel}${verifiedLabel}${confLabel}${commentStr}`;
 
       const emotionalCount = (p.motiveBreakdown["emotional"] || 0) + (p.motiveBreakdown["impulse"] || 0);
       if (emotionalCount > 0 && p.reviewCount >= 2) {
-        storeLine += `\uff08\u5176\u4e2d${emotionalCount}\u4eba\u662f\u60c5\u7eea/\u51b2\u52a8\u6d88\u8d39\uff09`;
+        storeLine += `（其中${emotionalCount}人是情绪/冲动消费）`;
       }
     }
 

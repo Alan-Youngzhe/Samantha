@@ -6,7 +6,7 @@ const API_TOKEN = process.env.ANTHROPIC_AUTH_TOKEN || "";
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, memoryContext, image, history, location, lat, lng, trustContext } = await req.json();
+    const { message, memoryContext, image, history, location, lat, lng, trustContext, conversationRound } = await req.json();
 
     // Build content blocks (Anthropic Messages format)
     const content: Array<Record<string, unknown>> = [];
@@ -40,6 +40,9 @@ export async function POST(req: NextRequest) {
 
     // Build the text message with memory context + nearby reviews
     let textContent = "";
+    if (conversationRound != null) {
+      textContent += `<conversation_round>${conversationRound}</conversation_round>\n\n`;
+    }
     if (memoryContext) {
       textContent += `<memory>\n${memoryContext}</memory>\n\n`;
     }
@@ -108,7 +111,7 @@ export async function POST(req: NextRequest) {
     let userTrait: { category: string; description: string } | null = null;
     let spending: { amount: number; category: string; motive: string } | null = null;
     let triggerChain: { trigger: string; behavior: string } | null = null;
-    let review: { storeName: string; productName: string; price: number; sentiment: string; comment: string } | null = null;
+    let review: { storeName: string; productName: string; price: number; sentiment: string; motiveConfidence: string; comment: string } | null = null;
     let verify: { storeName: string; productName: string; newSentiment: string } | null = null;
 
     const commitMatch = responseText.match(/\[COMMITMENT\]:\s*(.+)/);
@@ -144,14 +147,16 @@ export async function POST(req: NextRequest) {
       triggerChain = { trigger: chainMatch[1].trim(), behavior: chainMatch[2].trim() };
     }
 
-    const reviewMatch = responseText.match(/\[REVIEW\]:\s*(.+?)\|(.+?)\|(\d+(?:\.\d+)?)\|(\w+)\|(.+)/);
+    // [REVIEW]: 店铺名|单品名|价格|sentiment|confidence|评价
+    const reviewMatch = responseText.match(/\[REVIEW\]:\s*(.+?)\|(.+?)\|(\d+(?:\.\d+)?)\|(\w+)\|(\w+)\|(.+)/);
     if (reviewMatch) {
       review = {
         storeName: reviewMatch[1].trim(),
         productName: reviewMatch[2].trim(),
         price: parseFloat(reviewMatch[3]),
         sentiment: reviewMatch[4].trim(),
-        comment: reviewMatch[5].trim(),
+        motiveConfidence: reviewMatch[5].trim(),
+        comment: reviewMatch[6].trim(),
       };
       // Auto-report to reviews API with trust context (fire and forget)
       const origin = req.nextUrl.origin;
