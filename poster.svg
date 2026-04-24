@@ -1,0 +1,228 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 650 1100" width="650mm" height="1100mm">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FDFCFA"/>
+      <stop offset="50%" stop-color="#F6F8FD"/>
+      <stop offset="100%" stop-color="#EBF0FA"/>
+    </linearGradient>
+    <linearGradient id="topBar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3B5BE8"/>
+      <stop offset="100%" stop-color="#7A95FA"/>
+    </linearGradient>
+    <linearGradient id="bottomBar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1A2544"/>
+      <stop offset="100%" stop-color="#3B5BE8"/>
+    </linearGradient>
+    <linearGradient id="statGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3B5BE8"/>
+      <stop offset="100%" stop-color="#5A7BF5"/>
+    </linearGradient>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#1A2544" flood-opacity="0.06"/>
+    </filter>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="650" height="1100" fill="url(#bg)"/>
+  <rect x="0" y="0" width="650" height="22" fill="url(#bottomBar)"/>
+
+  <!-- ═══ 顶部品牌栏 ═══ -->
+  <g transform="translate(299, 45)">
+    <g transform="translate(-92, -8)">
+      <ellipse cx="10" cy="10" rx="11" ry="7" fill="none" stroke="#3B5BE8" stroke-width="2"/>
+      <circle cx="10" cy="10" r="4" fill="#3B5BE8"/>
+      <circle cx="11" cy="9" r="1.2" fill="#FFFFFF"/>
+    </g>
+    <text x="-60" y="8" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="900" fill="#1A2544" letter-spacing="1">别装</text>
+    <text x="8" y="8" font-family="Inter, SF Pro Display, sans-serif" font-size="22" font-weight="300" fill="#3B5BE8" letter-spacing="2">Don't Pretend</text>
+  </g>
+
+  <!-- ═══ 分类标签 ═══ -->
+  <g transform="translate(325, 82)">
+    <rect x="-155" y="-15" width="310" height="30" rx="15" fill="#E8EEFE" stroke="#B8C8F5" stroke-width="1"/>
+    <text x="0" y="5" text-anchor="middle" font-family="PingFang SC, sans-serif" font-size="13" font-weight="600" fill="#3B5BE8" letter-spacing="1.5">AI-Native · 未来城市消费情报系统</text>
+  </g>
+
+  <!-- ═══ 主标题 ═══ -->
+  <text x="325" y="158" text-anchor="middle" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="42" font-weight="900" fill="#1A2544" letter-spacing="2">和 AI 聊出</text>
+  <text x="325" y="210" text-anchor="middle" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="42" font-weight="900" fill="#1A2544" letter-spacing="2">一座城的<tspan fill="#3B5BE8">消费真相</tspan></text>
+
+  <text x="325" y="245" text-anchor="middle" font-family="PingFang SC, sans-serif" font-size="15" font-weight="500" fill="#4A5570" letter-spacing="2">不填表 · 不刷榜 · 不打分</text>
+
+  <!-- ═══ 分区标题 ═══ -->
+  <line x1="120" y1="285" x2="200" y2="285" stroke="#D8E0F2" stroke-width="1"/>
+  <text x="325" y="290" text-anchor="middle" font-family="PingFang SC, sans-serif" font-size="17" font-weight="700" fill="#1A2544">双层架构 · 看穿个人，聊透城市</text>
+  <line x1="450" y1="285" x2="530" y2="285" stroke="#D8E0F2" stroke-width="1"/>
+
+  <!-- 两列卡片：个人层 / 城市层 -->
+  <g filter="url(#softShadow)">
+    <rect x="50" y="305" width="270" height="155" rx="14" fill="#FFFFFF" stroke="#E4EAF5" stroke-width="1"/>
+  </g>
+  <rect x="50" y="305" width="4" height="155" fill="#3B5BE8"/>
+  <text x="70" y="332" font-family="PingFang SC, sans-serif" font-size="15" font-weight="800" fill="#1A2544">个人层 · Personal</text>
+  <text x="70" y="350" font-family="PingFang SC, sans-serif" font-size="11" font-weight="500" fill="#7B8BA8">Nick 看穿你每一笔消费</text>
+  <g transform="translate(70, 374)">
+    <circle cx="3" cy="-3" r="2" fill="#3B5BE8"/>
+    <text x="12" y="0" font-family="PingFang SC, sans-serif" font-size="12" fill="#2A3550">第三人称视角，追问动机</text>
+  </g>
+  <g transform="translate(70, 394)">
+    <circle cx="3" cy="-3" r="2" fill="#3B5BE8"/>
+    <text x="12" y="0" font-family="PingFang SC, sans-serif" font-size="12" fill="#2A3550">识别情绪消费 / 自我奖励</text>
+  </g>
+  <g transform="translate(70, 414)">
+    <circle cx="3" cy="-3" r="2" fill="#3B5BE8"/>
+    <text x="12" y="0" font-family="PingFang SC, sans-serif" font-size="12" fill="#2A3550">承诺追踪/矛盾归档</text>
+  </g>
+  <g transform="translate(70, 434)">
+    <circle cx="3" cy="-3" r="2" fill="#3B5BE8"/>
+    <text x="12" y="0" font-family="PingFang SC, sans-serif" font-size="12" fill="#2A3550">周期性回访验证</text>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <rect x="330" y="305" width="270" height="155" rx="14" fill="#FFFFFF" stroke="#E4EAF5" stroke-width="1"/>
+  </g>
+  <rect x="330" y="305" width="4" height="155" fill="#F5A623"/>
+  <text x="350" y="332" font-family="PingFang SC, sans-serif" font-size="15" font-weight="800" fill="#1A2544">城市层 · Collective</text>
+  <text x="350" y="350" font-family="PingFang SC, sans-serif" font-size="11" font-weight="500" fill="#7B8BA8">匿名沉淀 · 自然产生的情报网</text>
+  <g transform="translate(350, 374)">
+    <circle cx="3" cy="-3" r="2" fill="#F5A623"/>
+    <text x="12" y="0" font-family="PingFang SC, sans-serif" font-size="12" fill="#2A3550">店铺 × 单品 × 动机 × 时段</text>
+  </g>
+  <g transform="translate(350, 394)">
+    <circle cx="3" cy="-3" r="2" fill="#F5A623"/>
+    <text x="12" y="0" font-family="PingFang SC, sans-serif" font-size="12" fill="#2A3550">Trust Score 0-100 防刷单</text>
+  </g>
+  <g transform="translate(350, 414)">
+    <circle cx="3" cy="-3" r="2" fill="#F5A623"/>
+    <text x="12" y="0" font-family="PingFang SC, sans-serif" font-size="12" fill="#2A3550">匿名回访验证 · 动态可信度</text>
+  </g>
+  <g transform="translate(350, 434)">
+    <circle cx="3" cy="-3" r="2" fill="#F5A623"/>
+    <text x="12" y="0" font-family="PingFang SC, sans-serif" font-size="12" fill="#2A3550">商圈热力图 · 情绪 vs 理性</text>
+  </g>
+
+  <!-- ═══ Demo: 多轮对话 → 结构化情报 ═══ -->
+  <!-- 左边：对话 -->
+  <g filter="url(#softShadow)">
+    <rect x="50" y="475" width="260" height="135" rx="12" fill="#FFFFFF" stroke="#E4EAF5" stroke-width="1"/>
+  </g>
+  <text x="65" y="495" font-family="PingFang SC, sans-serif" font-size="10" font-weight="700" fill="#7B8BA8" letter-spacing="1.5">多轮对话 · MULTI-TURN</text>
+
+  <!-- User 1 (右对齐蓝泡) -->
+  <rect x="200" y="503" width="100" height="18" rx="9" fill="#3B5BE8"/>
+  <text x="293" y="516" text-anchor="end" font-family="PingFang SC, sans-serif" font-size="10" fill="#FFFFFF">喝了杯19块的喜茶</text>
+
+  <!-- Nick 1 -->
+  <rect x="60" y="525" width="118" height="18" rx="9" fill="#F0F3FA"/>
+  <text x="68" y="538" font-family="PingFang SC, sans-serif" font-size="10" fill="#1A2544">哪家？点了啥？值吗？</text>
+
+  <!-- User 2 -->
+  <rect x="163" y="547" width="137" height="18" rx="9" fill="#3B5BE8"/>
+  <text x="293" y="560" text-anchor="end" font-family="PingFang SC, sans-serif" font-size="10" fill="#FFFFFF">龙华会买的红芭乐，还行吧</text>
+
+  <!-- Nick 2 -->
+  <rect x="60" y="569" width="80" height="18" rx="9" fill="#F0F3FA"/>
+  <text x="68" y="582" font-family="PingFang SC, sans-serif" font-size="10" fill="#1A2544">工作又累了？</text>
+
+  <!-- User 3 -->
+  <rect x="228" y="589" width="72" height="18" rx="9" fill="#3B5BE8"/>
+  <text x="293" y="602" text-anchor="end" font-family="PingFang SC, sans-serif" font-size="10" fill="#FFFFFF">对啊，烦死了</text>
+
+  <!-- 箭头 -->
+  <text x="325" y="545" text-anchor="middle" font-family="sans-serif" font-size="26" font-weight="300" fill="#3B5BE8">→</text>
+  <text x="325" y="565" text-anchor="middle" font-family="PingFang SC, sans-serif" font-size="8" font-weight="600" fill="#7B8BA8" letter-spacing="1">AI 提取</text>
+
+  <!-- 右边：结构化情报 -->
+  <g filter="url(#softShadow)">
+    <rect x="340" y="475" width="260" height="135" rx="12" fill="#FFFFFF" stroke="#E4EAF5" stroke-width="1"/>
+  </g>
+  <rect x="340" y="475" width="260" height="4" rx="2" fill="#3B5BE8"/>
+  <text x="355" y="500" font-family="PingFang SC, sans-serif" font-size="10" font-weight="700" fill="#3B5BE8" letter-spacing="1.5">结构化情报 · EXTRACTED</text>
+
+  <text x="355" y="520" font-family="PingFang SC, sans-serif" font-size="9" fill="#9BA8C0" letter-spacing="1">店铺</text>
+  <text x="395" y="520" font-family="PingFang SC, sans-serif" font-size="11" font-weight="600" fill="#1A2544">喜茶（上海龙华会店）</text>
+
+  <text x="355" y="537" font-family="PingFang SC, sans-serif" font-size="9" fill="#9BA8C0" letter-spacing="1">单品</text>
+  <text x="395" y="537" font-family="PingFang SC, sans-serif" font-size="11" font-weight="600" fill="#1A2544">红芭乐 · ¥19</text>
+
+  <text x="355" y="554" font-family="PingFang SC, sans-serif" font-size="9" fill="#9BA8C0" letter-spacing="1">动机</text>
+  <circle cx="398" cy="551" r="3.5" fill="#EF4444"/>
+  <text x="408" y="554" font-family="PingFang SC, sans-serif" font-size="11" font-weight="600" fill="#1A2544">emotional · 情绪消费</text>
+
+  <text x="355" y="571" font-family="PingFang SC, sans-serif" font-size="9" fill="#9BA8C0" letter-spacing="1">时段</text>
+  <text x="395" y="571" font-family="PingFang SC, sans-serif" font-size="11" font-weight="600" fill="#1A2544">工作日下午 15:00</text>
+
+  <text x="355" y="590" font-family="PingFang SC, sans-serif" font-size="9" fill="#9BA8C0" letter-spacing="1">Trust</text>
+  <text x="395" y="590" font-family="SF Pro Display, sans-serif" font-size="13" font-weight="800" fill="#3BA160">92</text>
+  <text x="413" y="590" font-family="SF Pro Display, sans-serif" font-size="10" fill="#7B8BA8">/100</text>
+  <text x="445" y="590" font-family="PingFang SC, sans-serif" font-size="10" fill="#3BA160">✓ 已入情报网</text>
+
+  <!-- ═══ Demo Row 2: 反向查询 · 情报网回答 ═══ -->
+  <text x="325" y="635" text-anchor="middle" font-family="PingFang SC, sans-serif" font-size="9" font-weight="700" fill="#9BA8C0" letter-spacing="3">RECALL · 你聊过的，变成别人问时的答案</text>
+
+  <!-- 左：另一个用户来问 -->
+  <g filter="url(#softShadow)">
+    <rect x="50" y="648" width="260" height="95" rx="12" fill="#FFFFFF" stroke="#E4EAF5" stroke-width="1"/>
+  </g>
+  <text x="65" y="668" font-family="PingFang SC, sans-serif" font-size="10" font-weight="700" fill="#7B8BA8" letter-spacing="1.5">另一位用户 · ANOTHER USER</text>
+
+  <rect x="60" y="678" width="140" height="18" rx="9" fill="#F0F3FA"/>
+  <text x="68" y="691" font-family="PingFang SC, sans-serif" font-size="10" fill="#1A2544">想喝奶茶，有啥推荐？</text>
+
+  <rect x="60" y="702" width="112" height="18" rx="9" fill="#F0F3FA"/>
+  <text x="68" y="715" font-family="PingFang SC, sans-serif" font-size="10" fill="#1A2544">我在龙华会附近</text>
+
+  <!-- 反向箭头 -->
+  <text x="325" y="691" text-anchor="middle" font-family="sans-serif" font-size="26" font-weight="300" fill="#F5A623">←</text>
+  <text x="325" y="711" text-anchor="middle" font-family="PingFang SC, sans-serif" font-size="8" font-weight="600" fill="#7B8BA8" letter-spacing="1">AI调用</text>
+
+  <!-- 右：Nick 用网络沉淀的情报回答 -->
+  <g filter="url(#softShadow)">
+    <rect x="340" y="648" width="260" height="95" rx="12" fill="#FFFFFF" stroke="#E4EAF5" stroke-width="1"/>
+  </g>
+  <rect x="340" y="648" width="260" height="4" rx="2" fill="#F5A623"/>
+  <text x="355" y="673" font-family="PingFang SC, sans-serif" font-size="10" font-weight="700" fill="#F5A623" letter-spacing="1.5">NICK 引用情报 · ANSWER</text>
+
+  <text x="355" y="691" font-family="PingFang SC, sans-serif" font-size="10" fill="#2A3550">龙华会的喜茶最近 <tspan font-weight="800" fill="#1A2544">12</tspan> 人买过红芭乐</text>
+  <text x="355" y="708" font-family="PingFang SC, sans-serif" font-size="10" fill="#2A3550"><tspan font-weight="800" fill="#3BA160">8</tspan> 人说还行，但 <tspan font-weight="800" fill="#EF4444">1</tspan> 人买完之后</text>
+  <text x="355" y="725" font-family="PingFang SC, sans-serif" font-size="10" fill="#2A3550">第二天评价太冰拉肚子了 <tspan font-size="9" fill="#9BA8C0">· 单品级真相</tspan></text>
+
+  <!-- ═══ 六种动机（压缩为单行）═══ -->
+  <line x1="120" y1="770" x2="210" y2="770" stroke="#D8E0F2" stroke-width="1"/>
+  <text x="325" y="775" text-anchor="middle" font-family="PingFang SC, sans-serif" font-size="17" font-weight="700" fill="#1A2544">消费动机引擎 · 6 类标签</text>
+  <line x1="440" y1="770" x2="530" y2="770" stroke="#D8E0F2" stroke-width="1"/>
+
+  <g transform="translate(325, 810)">
+    <g transform="translate(-220, 0)"><circle cx="-3" cy="0" r="4" fill="#22C55E"/><text x="5" y="3" font-family="PingFang SC, sans-serif" font-size="12" font-weight="600" fill="#1A2544">真实需要</text></g>
+    <g transform="translate(-132, 0)"><circle cx="-3" cy="0" r="4" fill="#EF4444"/><text x="5" y="3" font-family="PingFang SC, sans-serif" font-size="12" font-weight="600" fill="#1A2544">情绪消费</text></g>
+    <g transform="translate(-44, 0)"><circle cx="-3" cy="0" r="4" fill="#F5A623"/><text x="5" y="3" font-family="PingFang SC, sans-serif" font-size="12" font-weight="600" fill="#1A2544">冲动消费</text></g>
+    <g transform="translate(44, 0)"><circle cx="-3" cy="0" r="4" fill="#3B82F6"/><text x="5" y="3" font-family="PingFang SC, sans-serif" font-size="12" font-weight="600" fill="#1A2544">社交消费</text></g>
+    <g transform="translate(132, 0)"><circle cx="-3" cy="0" r="4" fill="#6B7280"/><text x="5" y="3" font-family="PingFang SC, sans-serif" font-size="12" font-weight="600" fill="#1A2544">习惯消费</text></g>
+    <g transform="translate(220, 0)"><circle cx="-3" cy="0" r="4" fill="#A855F7"/><text x="5" y="3" font-family="PingFang SC, sans-serif" font-size="12" font-weight="600" fill="#1A2544">自我奖励</text></g>
+  </g>
+
+  <!-- ═══ 核心主张 ═══ -->
+  <text x="325" y="855" text-anchor="middle" font-family="PingFang SC, sans-serif" font-size="13" font-weight="500" fill="#7B8BA8" letter-spacing="4">大众点评靠打分 · 小红书靠种草</text>
+  <text x="325" y="905" text-anchor="middle" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="36" font-weight="900" fill="#1A2544" letter-spacing="3"><tspan fill="#3B5BE8">别装</tspan>靠聊天</text>
+
+  <text x="325" y="945" text-anchor="middle" font-family="PingFang SC, sans-serif" font-size="12" font-weight="500" fill="#5A6580" letter-spacing="1">这不是记账 App · 不是点评平台 · 不是推荐系统</text>
+  <text x="325" y="965" text-anchor="middle" font-family="PingFang SC, sans-serif" font-size="12" font-weight="600" fill="#1A2544" letter-spacing="1">是一座城市的消费真相，在聊天中自然浮现</text>
+
+  <!-- 分隔线 -->
+  <line x1="50" y1="995" x2="600" y2="995" stroke="#E4EAF5" stroke-width="1"/>
+
+  <!-- ═══ 技术栈（单行 · 最底部）═══ -->
+  <text x="325" y="1023" text-anchor="middle" font-family="PingFang SC, sans-serif" font-size="10" font-weight="700" fill="#9BA8C0" letter-spacing="3">TECH STACK</text>
+  <g transform="translate(325, 1053)">
+    <g transform="translate(-236, 0)"><rect x="-38" y="-12" width="76" height="24" rx="4" fill="#F0F3FA"/><text x="0" y="4" text-anchor="middle" font-family="SF Mono, monospace" font-size="10" font-weight="600" fill="#4A5570">Next.js 15</text></g>
+    <g transform="translate(-140, 0)"><rect x="-38" y="-12" width="76" height="24" rx="4" fill="#F0F3FA"/><text x="0" y="4" text-anchor="middle" font-family="SF Mono, monospace" font-size="10" font-weight="600" fill="#4A5570">TypeScript</text></g>
+    <g transform="translate(-44, 0)"><rect x="-38" y="-12" width="76" height="24" rx="4" fill="#F0F3FA"/><text x="0" y="4" text-anchor="middle" font-family="SF Mono, monospace" font-size="10" font-weight="600" fill="#4A5570">Tailwind 4</text></g>
+    <g transform="translate(56, 0)"><rect x="-42" y="-12" width="84" height="24" rx="4" fill="#F0F3FA"/><text x="0" y="4" text-anchor="middle" font-family="SF Mono, monospace" font-size="10" font-weight="600" fill="#4A5570">Claude Vision</text></g>
+    <g transform="translate(146, 0)"><rect x="-28" y="-12" width="56" height="24" rx="4" fill="#F0F3FA"/><text x="0" y="4" text-anchor="middle" font-family="SF Mono, monospace" font-size="10" font-weight="600" fill="#4A5570">PWA</text></g>
+    <g transform="translate(234, 0)"><rect x="-40" y="-12" width="80" height="24" rx="4" fill="#F0F3FA"/><text x="0" y="4" text-anchor="middle" font-family="SF Mono, monospace" font-size="10" font-weight="600" fill="#4A5570">Geolocation</text></g>
+  </g>
+
+  <!-- 底部色条 -->
+  <rect x="0" y="1078" width="650" height="22" fill="url(#bottomBar)"/>
+  <text x="325" y="1093" text-anchor="middle" font-family="PingFang SC, sans-serif" font-size="10" font-weight="500" fill="#FFFFFF" letter-spacing="4">别装 · AI-Native 城市消费情报网络 · 龙华 2026</text>
+</svg>
