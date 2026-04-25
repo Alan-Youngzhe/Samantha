@@ -174,11 +174,11 @@ export default function ChatSidebar({
                       )}
                     </button>
 
-                    {/* Delete button — appears on hover */}
+                    {/* Delete button — appears on hover, hides badge */}
                     {!isConfirming && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setConfirmDelete(dk); }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-[#7A6245] opacity-0 group-hover:opacity-100 hover:text-[#E8564A] transition-all"
+                        className="absolute right-2 top-2 p-1.5 rounded-lg text-[#7A6245] opacity-0 group-hover:opacity-100 hover:text-[#E8564A] hover:bg-[#3D2B1F] transition-all z-10"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
