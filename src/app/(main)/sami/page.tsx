@@ -256,17 +256,15 @@ export default function SamiPage() {
 
   const dateKeys = Object.keys(diary).sort((a, b) => b.localeCompare(a));
 
-  // One-time cleanup: purge stale Nick-era cached messages
   useEffect(() => {
+    // One-time cleanup: purge stale Nick-era cached messages
     const purged = localStorage.getItem("_nick_purged");
     if (!purged) {
       localStorage.removeItem("bz-diary");
       localStorage.removeItem("bz-proactive-last");
       localStorage.setItem("_nick_purged", "1");
     }
-  }, []);
 
-  useEffect(() => {
     setDiary(loadDiary());
     setMounted(true);
     const p = getProfile();
@@ -533,9 +531,15 @@ export default function SamiPage() {
           className="max-w-sm w-full"
           onContextMenu={(e) => {
             e.preventDefault();
+            localStorage.setItem("_nick_purged", "1");
             const p = loadDemoData();
             setProfile(p);
-            setDiary(loadDiary());
+            const d = loadDiary();
+            setDiary(d);
+            if (Object.keys(d).length > 0) {
+              const latest = Object.keys(d).sort((a, b) => b.localeCompare(a))[0];
+              setActiveDate(latest);
+            }
             setShowOnboard(false);
           }}
         >
