@@ -318,7 +318,13 @@ function buildUserContent(args: {
     });
   }
 
+  const now = new Date();
+  const hour = now.getHours();
+  const timeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(hour).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const dayOfWeek = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][now.getDay()];
+
   let text = "";
+  text += `[当前时间：${timeStr} ${dayOfWeek}]\n`;
   if (conversationRound != null) {
     text += `<conversation_round>${conversationRound}</conversation_round>\n\n`;
   }
