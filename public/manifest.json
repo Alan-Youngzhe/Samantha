@@ -1,22 +1,22 @@
 {
-  "name": "别装",
-  "short_name": "别装",
-  "description": "Nick 看穿你每一笔消费背后的真实动机",
+  "name": "Samantha",
+  "short_name": "Samantha",
+  "description": "Samantha — 你的城市消费情报员",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#FFF6F0",
+  "theme_color": "#FFF6F0",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/icon-192.svg",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/svg+xml"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon-512.svg",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/svg+xml"
     }
   ],
   "share_target": {

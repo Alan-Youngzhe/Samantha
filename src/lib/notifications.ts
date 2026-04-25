@@ -1,4 +1,4 @@
-// 别装推送通知系统 — Nick 主动找用户
+// Samantha 推送通知系统 — 主动找用户
 
 const SW_PATH = "/sw.js";
 
@@ -34,16 +34,16 @@ export async function sendLocalNotification(
     body,
     icon: "/icon-192.png",
     badge: "/icon-192.png",
-    tag: "nick-proactive",
+    tag: "sam-proactive",
     data: { url },
   } as NotificationOptions);
 }
 
 /** 
- * 调度 Nick 的定时推送
+ * 调度 Samantha 的定时推送
  * 基于用户的消费模式，在高风险时段推送
  */
-export function scheduleNickNotifications(): void {
+export function scheduleSamNotifications(): void {
   if (typeof window === "undefined") return;
 
   // 每小时检查一次是否应该推送
@@ -76,7 +76,7 @@ export function scheduleNickNotifications(): void {
       if (localStorage.getItem(msgKey)) continue;
       localStorage.setItem(msgKey, "1");
 
-      sendLocalNotification("Nick", m.text);
+      sendLocalNotification("Samantha", m.text);
       break; // 每次最多推一条
     }
   }

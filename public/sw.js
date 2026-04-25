@@ -1,4 +1,4 @@
-// 别装 Service Worker — 推送通知 + 离线基础
+// Samantha Service Worker — 推送通知 + 离线基础
 
 const CACHE_NAME = "bz-v1";
 const PRECACHE = ["/", "/report"];

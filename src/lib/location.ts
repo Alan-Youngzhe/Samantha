@@ -1,4 +1,4 @@
-// LBS 空间感知模块 — 浏览器定位 + Nominatim 反向编码
+// LBS 空间感知模块 — 浏览器定位 + 高德逆地理编码（通过 /api/geocode 代理）
 
 export interface LocationInfo {
   lat: number;
@@ -23,27 +23,13 @@ export function getCurrentPosition(): Promise<GeolocationPosition> {
   });
 }
 
-/** Nominatim 反向地理编码（免费，无需 API key） */
+/** 高德逆地理编码（通过服务端 /api/geocode 代理，保护 API key） */
 export async function reverseGeocode(lat: number, lng: number): Promise<string> {
   try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=16&accept-language=zh-CN`,
-      { headers: { "User-Agent": "BieZhuang-App/1.0" } }
-    );
+    const res = await fetch(`/api/geocode?lat=${lat}&lng=${lng}`);
     if (!res.ok) return `${lat.toFixed(4)},${lng.toFixed(4)}`;
     const data = await res.json();
-    // Build a concise name: district + road or suburb
-    const addr = data.address || {};
-    const parts: string[] = [];
-    if (addr.suburb || addr.district || addr.city_district) {
-      parts.push(addr.suburb || addr.district || addr.city_district);
-    }
-    if (addr.road) parts.push(addr.road);
-    if (parts.length === 0 && data.display_name) {
-      // Fallback: take first two segments of display_name
-      return data.display_name.split(",").slice(0, 2).join(" ");
-    }
-    return parts.join(" · ") || `${lat.toFixed(4)},${lng.toFixed(4)}`;
+    return data.name || `${lat.toFixed(4)},${lng.toFixed(4)}`;
   } catch {
     return `${lat.toFixed(4)},${lng.toFixed(4)}`;
   }

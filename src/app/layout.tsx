@@ -13,9 +13,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "别装 — 你的消费真相",
-  description: "一个用第三人称视角看穿你每一笔消费背后真实动机的 AI。",
+  title: "Samantha — 城市消费情报",
+  description: "你的 AI 好友 Samantha，通过聊天帮你认识这座城市的消费真相。",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/logo.svg", type: "image/svg+xml", sizes: "any" },
+      { url: "/icon-192.svg", type: "image/svg+xml", sizes: "192x192" },
+    ],
+    shortcut: "/logo.svg",
+  },
 };
 
 export const viewport: Viewport = {
@@ -23,7 +30,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#000000",
+  themeColor: "#FFF9F4",
 };
 
 export default function RootLayout({

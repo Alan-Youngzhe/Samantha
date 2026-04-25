@@ -1,8 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
-  <rect width="192" height="192" rx="40" fill="#000"/>
-  <circle cx="96" cy="82" r="28" fill="none" stroke="#F59E0B" stroke-width="4"/>
-  <circle cx="86" cy="76" r="5" fill="#F59E0B"/>
-  <circle cx="106" cy="76" r="5" fill="#F59E0B"/>
-  <path d="M82 92 Q96 104 110 92" fill="none" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/>
-  <text x="96" y="148" text-anchor="middle" fill="#F59E0B" font-family="sans-serif" font-size="28" font-weight="bold">别装</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192" fill="none">
+   <rect width="192" height="192" rx="44" fill="#D95F5C"/>
+   <path d="M83 111C72.4 123.7 62.9 130 49.8 130C30.9 130 17 115.7 17 96C17 76.3 30.9 62 49.8 62C64.6 62 75.2 69 87.6 85.3L102.4 104.7C114.8 121 125.4 128 140.2 128C159.1 128 173 113.7 173 94C173 74.3 159.1 60 140.2 60C127.1 60 117.6 66.3 107 79" stroke="#FCF4F0" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+ </svg>

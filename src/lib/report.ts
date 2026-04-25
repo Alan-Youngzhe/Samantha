@@ -1,4 +1,4 @@
-// 别装 — 心理洞察报告数据聚合
+// Samantha — 消费洞察报告数据聚合
 import { UserProfile, type TriggerChain, type UserTrait } from "./memory";
 
 export interface ReportData {
@@ -6,14 +6,14 @@ export interface ReportData {
   gender: "male" | "female" | "other";
   daysActive: number;
   totalInteractions: number;
-  // Nick 风格人格叙述
-  nickNarrative: string;
+  // Samantha 风格人格叙述
+  samNarrative: string;
   spendingPersona: string;
-  // 心理洞察数据
+  // Samantha 的观察
   triggerChains: TriggerChain[];
-  excuses: UserTrait[];
+  habits: UserTrait[];
   contradictions: UserTrait[];
-  fears: UserTrait[];
+  values: UserTrait[];
   // 承诺追踪（心理维度）
   commitments: {
     total: number;
@@ -29,7 +29,7 @@ export interface ReportData {
     count: number;
     emoji: string;
   }>;
-  // Nick 的笔记
+  // Samantha 的笔记
   recentHighlights: Array<{
     date: string;
     summary: string;
@@ -72,7 +72,7 @@ export const MOTIVE_COLORS: Record<string, string> = {
 
 function derivePersona(profile: UserProfile): string {
   const traits = profile.traits || [];
-  const personaTrait = traits.find((t) => t.category === "persona");
+  const personaTrait = traits.find((t) => t.category === "personality");
   if (personaTrait) return personaTrait.description;
 
   const spendings = profile.spendings || [];
@@ -90,14 +90,14 @@ function derivePersona(profile: UserProfile): string {
   return "混合型消费者";
 }
 
-function buildNickNarrative(profile: UserProfile): string {
-  const pronoun = profile.gender === "female" ? "她" : "他";
+function buildSamNarrative(profile: UserProfile): string {
+  const pronoun = "你";
   const traits = profile.traits || [];
   const spendings = profile.spendings || [];
   const chains = profile.triggerChains || [];
 
   if (spendings.length === 0 && traits.length === 0) {
-    return `${pronoun}刚来。还看不出什么。让我再观察一阵。`;
+    return `我和${profile.name}刚认识不久，还在了解中。多聊几次我就能说出更多。`;
   }
 
   const parts: string[] = [];
@@ -105,29 +105,29 @@ function buildNickNarrative(profile: UserProfile): string {
   // Persona
   const persona = derivePersona(profile);
   if (persona !== "数据不足") {
-    parts.push(`${profile.name}是个${persona}。`);
+    parts.push(`我觉得${profile.name}是个${persona}。`);
   }
 
   // Most common trigger chain
   if (chains.length > 0) {
     const top = [...chains].sort((a, b) => b.count - a.count)[0];
-    parts.push(`${pronoun}最明显的模式是"${top.trigger}"之后就会"${top.behavior}"——已经${top.count}次了。`);
+    parts.push(`我注意到${pronoun}“${top.trigger}”的时候就会“${top.behavior}”，已经${top.count}次了。`);
   }
 
-  // Excuses
-  const excuses = traits.filter((t) => t.category === "excuse");
-  if (excuses.length > 0) {
-    parts.push(`${pronoun}最常用的借口是"${excuses[0].description}"。`);
+  // Habits
+  const habits = traits.filter((t) => t.category === "habit");
+  if (habits.length > 0) {
+    parts.push(`${pronoun}有个习惯——${habits[0].description}。`);
   }
 
   // Contradictions
   const contradictions = traits.filter((t) => t.category === "contradiction");
   if (contradictions.length > 0) {
-    parts.push(`有意思的是——${contradictions[0].description}。`);
+    parts.push(`有个有意思的事——${contradictions[0].description}。`);
   }
 
   if (parts.length === 0) {
-    parts.push(`还在观察${pronoun}。数据不够多，但已经有些苗头了。`);
+    parts.push(`我还在了解${pronoun}。数据不够多，但已经有些苗头了。`);
   }
 
   return parts.join("");
@@ -170,12 +170,12 @@ export function generateReport(profile: UserProfile): ReportData {
     gender: profile.gender,
     daysActive: profile.stats.daysActive,
     totalInteractions: profile.stats.totalInteractions,
-    nickNarrative: buildNickNarrative(profile),
+    samNarrative: buildSamNarrative(profile),
     spendingPersona: derivePersona(profile),
     triggerChains: (profile.triggerChains || []).sort((a, b) => b.count - a.count),
-    excuses: traits.filter((t) => t.category === "excuse"),
+    habits: traits.filter((t) => t.category === "habit"),
     contradictions: traits.filter((t) => t.category === "contradiction"),
-    fears: traits.filter((t) => t.category === "fear"),
+    values: traits.filter((t) => t.category === "value"),
     commitments: {
       total,
       fulfilled,

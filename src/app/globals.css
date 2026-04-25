@@ -1,18 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --background: #000000;
-  --foreground: #e5e5e5;
-  --muted: #a3a3a3;
-  --accent: #f59e0b;
-  --accent-dim: #b45309;
-  --card: #0a0a0a;
-  --card-border: #1a1a1a;
-  --danger: #ef4444;
-  --success: #22c55e;
-  --bruise: #6b5b7b;
-  --mirror-bg: rgba(107, 91, 123, 0.08);
-  --mirror-border: rgba(107, 91, 123, 0.2);
+  --background: #FFF9F4;
+  --foreground: #2C1810;
+  --muted: #A08868;
+  --accent: #E8564A;
+  --accent-dim: #C4433A;
+  --card: #FFF2EB;
+  --card-border: #F0E4DA;
+  --danger: #E8564A;
+  --success: #7CAF6B;
+  --warm-gold: #D4A853;
+  --cream: #FFF9F4;
+  --peach: #FFF2EB;
+  --surface: #F5E6DA;
+  --text-dark: #2C1810;
+  --text-warm: #4A3526;
+  --text-secondary: #7A6245;
 }
 
 @theme inline {
@@ -25,6 +29,13 @@
   --color-card-border: var(--card-border);
   --color-danger: var(--danger);
   --color-success: var(--success);
+  --color-warm-gold: var(--warm-gold);
+  --color-text-dark: var(--text-dark);
+  --color-text-warm: var(--text-warm);
+  --color-text-secondary: var(--text-secondary);
+  --color-cream: var(--cream);
+  --color-peach: var(--peach);
+  --color-surface: var(--surface);
   --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 }
@@ -46,7 +57,7 @@ body {
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #262626; border-radius: 999px; }
+::-webkit-scrollbar-thumb { background: #D4C4B4; border-radius: 999px; }
 
 /* Typing animation */
 @keyframes blink {
@@ -59,19 +70,23 @@ body {
   color: var(--accent);
 }
 
-/* Mirror persona styling */
-.mirror-serif {
-  font-family: "Georgia", "Noto Serif SC", serif;
-  font-style: italic;
-}
 
 /* Mobile overlay backdrop */
 .sidebar-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(44, 24, 16, 0.4);
   backdrop-filter: blur(4px);
   z-index: 40;
+}
+
+/* Samantha avatar glow when drag target */
+@keyframes samantha-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 86, 74, 0.3); }
+  50% { box-shadow: 0 0 0 12px rgba(232, 86, 74, 0); }
+}
+.samantha-drop-target {
+  animation: samantha-glow 1.2s ease-in-out infinite;
 }
 
 /* Safe area for mobile notch */

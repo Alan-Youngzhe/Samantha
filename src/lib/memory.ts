@@ -1,9 +1,10 @@
-// 别装记忆系统 — 五层架构
-// L1: 原始记录（每次交互）
-// L2: 消费画像（模式提取）
-// L3: 承诺追踪（消费言行矛盾检测）
-// L4: 用户消费灵魂画像（soul_user）
-// L5: 消费流水（结构化消费记录）
+// Samantha 记忆系统 — 六层架构（以关系为核心）
+// L1: 感知日记 — 每次交互的完整感知（文字、图片、情绪、感官细节）
+// L2: 情绪图谱 — 用户情绪轨迹与触发因素
+// L3: 消费足迹 — 结构化消费记录（城市探索维度）
+// L4: 关系线索 — Samantha 对用户的理解（性格、偏好、习惯）
+// L5: 城市记忆 — 通过对话构建的城市认知
+// L6: 承诺备忘 — 用户说过的话和做过的承诺
 
 export interface MemoryEntry {
   id: string;
@@ -13,6 +14,7 @@ export interface MemoryEntry {
   aiResponse: string;
   imageDescription?: string;
   extractedInsights?: string[];
+  mood?: string;
   location?: string;
 }
 
@@ -43,7 +45,7 @@ export interface Commitment {
 }
 
 export interface UserTrait {
-  category: "spending_trigger" | "excuse" | "fear" | "desire" | "contradiction" | "persona";
+  category: "preference" | "habit" | "mood_pattern" | "social_style" | "value" | "contradiction" | "personality";
   description: string;
   firstSeen: string;
   count: number;
@@ -198,10 +200,10 @@ export function addUserTrait(
   description: string
 ): UserProfile {
   if (!profile.traits) profile.traits = [];
-  const validCategories = ["spending_trigger", "excuse", "fear", "desire", "contradiction", "persona"] as const;
+  const validCategories = ["preference", "habit", "mood_pattern", "social_style", "value", "contradiction", "personality"] as const;
   const cat = validCategories.includes(category as typeof validCategories[number])
     ? (category as typeof validCategories[number])
-    : "excuse";
+    : "habit";
 
   const existing = profile.traits.find(
     (t) => t.category === cat && t.description === description
@@ -278,83 +280,97 @@ export function addTriggerChain(
   return profile;
 }
 
-// 构建记忆上下文给 Claude
+// 构建记忆上下文给 Claude——以 Samantha 的视角描述她对用户的了解
 export function buildMemoryContext(profile: UserProfile): string {
   const recentMemories = profile.memories.slice(-20);
   const pendingCommitments = profile.commitments.filter(
     (c) => c.status === "pending"
   );
 
-  const pronoun = profile.gender === "female" ? "她" : "他";
-  let context = `## 用户档案\n`;
-  context += `姓名：${profile.name}\n`;
-  context += `性别代词：${pronoun}（请始终使用这个代词）\n`;
-  context += `使用天数：${profile.stats.daysActive}\n`;
-  context += `总交互次数：${profile.stats.totalInteractions}\n`;
-  context += `分享照片数：${profile.stats.photosShared}\n`;
-  context += `累计消费记录：¥${profile.stats.totalSpent || 0}\n\n`;
+  let context = `## 我对 ${profile.name} 的了解\n`;
+  context += `认识第 ${profile.stats.daysActive} 天`;
+  context += ` · 聊过 ${profile.stats.totalInteractions} 次`;
+  if (profile.stats.photosShared > 0) {
+    context += ` · 分享过 ${profile.stats.photosShared} 张照片`;
+  }
+  if ((profile.stats.totalSpent || 0) > 0) {
+    context += ` · 我记下的消费约 ¥${profile.stats.totalSpent}`;
+  }
+  context += `\n\n`;
 
-  // 本周消费汇总
+  // 这周的消费足迹
   const spendings = profile.spendings || [];
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const weekSpendings = spendings.filter((s) => s.timestamp > weekAgo);
   if (weekSpendings.length > 0) {
     const weekTotal = weekSpendings.reduce((sum, s) => sum + s.amount, 0);
-    const emotionalCount = weekSpendings.filter((s) => s.motive === "emotional" || s.motive === "impulse" || s.motive === "reward").length;
-    context += `## 本周消费概况\n`;
-    context += `本周消费 ${weekSpendings.length} 笔，总计 ¥${weekTotal}\n`;
-    context += `其中情绪/冲动/自我奖励消费 ${emotionalCount} 笔\n`;
+    context += `## 这周的消费足迹\n`;
+    context += `${weekSpendings.length} 笔，共 ¥${weekTotal}\n`;
     const locationSpendings = weekSpendings.filter((s) => s.location);
     if (locationSpendings.length > 0) {
       const locations = [...new Set(locationSpendings.map((s) => s.location))];
-      context += `消费地点涉及：${locations.join("、")}\n`;
+      context += `去过：${locations.join("、")}\n`;
+    }
+    const emotionalCount = weekSpendings.filter(
+      (s) => s.motive === "emotional" || s.motive === "impulse" || s.motive === "reward"
+    ).length;
+    if (emotionalCount > 0 && weekSpendings.length >= 3) {
+      context += `其中 ${emotionalCount} 笔看起来和心情有关\n`;
     }
     context += `\n`;
   }
 
+  // 最近聊过的事
   if (recentMemories.length > 0) {
-    context += `## 最近记录（最近${recentMemories.length}条）\n`;
-    for (const m of recentMemories) {
-      const date = new Date(m.timestamp).toLocaleString("zh-CN");
+    context += `## 最近聊过的事\n`;
+    for (const m of recentMemories.slice(-10)) {
+      const date = new Date(m.timestamp).toLocaleDateString("zh-CN");
       context += `[${date}] `;
       if (m.type === "photo") {
         context += `[照片] ${m.imageDescription || ""} `;
       }
-      context += `用户说：${m.userInput}\n`;
-      context += `Nick回复：${m.aiResponse}\n\n`;
+      context += `${m.userInput}`;
+      if (m.mood) context += ` (情绪：${m.mood})`;
+      context += `\n`;
     }
+    context += `\n`;
   }
 
+  // 我注意到的规律
   if (profile.patterns.length > 0) {
-    context += `## 已识别的行为模式\n`;
+    context += `## 我注意到的规律\n`;
     for (const p of profile.patterns) {
-      context += `- [${p.category}] ${p.pattern}（出现${p.count}次）\n`;
+      context += `- ${p.pattern}（${p.count}次）\n`;
     }
     context += `\n`;
   }
 
-  if (pendingCommitments.length > 0) {
-    context += `## 未兑现的承诺（重要！用这些来“打脸”）\n`;
-    for (const c of pendingCommitments) {
-      const date = new Date(c.madeAt).toLocaleString("zh-CN");
-      context += `- "${c.content}"（${date}说的）\n`;
+  // 我对这个人的理解
+  const traits = profile.traits || [];
+  if (traits.length > 0) {
+    context += `## 我对这个人的理解\n`;
+    for (const t of traits) {
+      context += `- ${t.description}（观察到 ${t.count} 次）\n`;
     }
     context += `\n`;
   }
 
-  if (profile.traits && profile.traits.length > 0) {
-    context += `## 用户消费画像（Nick 对用户消费性格的认知）\n`;
-    for (const t of profile.traits) {
-      context += `- [${t.category}] ${t.description}（观察到${t.count}次）\n`;
-    }
-    context += `\n`;
-  }
-
+  // 我发现的情绪-行为关联
   const chains = profile.triggerChains || [];
   if (chains.length > 0) {
-    context += `## 情绪消费链（已识别的"触发→行为"模式）\n`;
+    context += `## 我发现的情绪-行为关联\n`;
     for (const tc of chains) {
-      context += `- "${tc.trigger}" → "${tc.behavior}"（出现${tc.count}次）\n`;
+      context += `- “${tc.trigger}” 的时候，倾向于“${tc.behavior}”（${tc.count}次）\n`;
+    }
+    context += `\n`;
+  }
+
+  // 说过的话（还没兑现）
+  if (pendingCommitments.length > 0) {
+    context += `## 说过的话（还没兑现）\n`;
+    for (const c of pendingCommitments) {
+      const date = new Date(c.madeAt).toLocaleString("zh-CN");
+      context += `- “${c.content}”（${date}）\n`;
     }
     context += `\n`;
   }

@@ -118,7 +118,7 @@ export default function ChatInput({ onSend, disabled, locationName, onRequestLoc
   };
 
   return (
-    <div className="border-t border-neutral-800 bg-black p-3 safe-bottom">
+    <div className="bg-background px-4 py-3 safe-bottom">
       {/* Location tag */}
       {locationName && (
         <div className="mb-2 flex items-center gap-1.5 text-xs text-accent">
@@ -133,7 +133,7 @@ export default function ChatInput({ onSend, disabled, locationName, onRequestLoc
           <img
             src={image.preview}
             alt="待发送"
-            className="h-20 rounded-xl border border-neutral-800"
+            className="h-20 rounded-xl border border-card-border"
           />
           <button
             onClick={() => setImage(null)}
@@ -144,40 +144,62 @@ export default function ChatInput({ onSend, disabled, locationName, onRequestLoc
         </div>
       )}
 
-      <div className="flex items-end gap-1.5">
-        {/* Tool buttons */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => fileInputRef.current?.click()}
+      <div className="flex flex-col bg-card rounded-[20px] border border-card-border overflow-hidden">
+        {/* Textarea row */}
+        <div className="px-3.5 pt-3 pb-1">
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
             disabled={disabled}
-            className="p-2 rounded-lg text-neutral-500 hover:text-neutral-300 active:bg-neutral-800 transition-colors disabled:opacity-30"
-          >
-            <Camera className="w-5 h-5" />
-          </button>
-          <button
-            onClick={onRequestLocation}
-            disabled={disabled || locationLoading}
-            className={`p-2 rounded-lg transition-colors disabled:opacity-30 ${
-              locationName ? "text-accent" : "text-neutral-500 hover:text-neutral-300 active:bg-neutral-800"
-            }`}
-            title={locationName || "获取位置"}
-          >
-            {locationLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <MapPin className="w-5 h-5" />}
-          </button>
-          {speechSupported && (
+            placeholder="跟 Samantha 聊聊…"
+            rows={1}
+            className="w-full resize-none bg-transparent text-sm text-foreground placeholder:text-muted focus:outline-none disabled:opacity-30"
+          />
+        </div>
+
+        {/* Action bar */}
+        <div className="flex items-center justify-between px-2 pb-2 pt-1">
+          <div className="flex items-center gap-0.5">
             <button
-              onClick={toggleRecording}
+              onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
-              className={`p-2 rounded-lg transition-colors disabled:opacity-30 ${
-                isRecording
-                  ? "text-red-400 bg-red-500/10"
-                  : "text-neutral-500 hover:text-neutral-300 active:bg-neutral-800"
-              }`}
-              title={isRecording ? "停止录音" : "语音输入"}
+              className="p-1.5 rounded-full text-muted hover:text-foreground transition-colors disabled:opacity-30"
             >
-              {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              <Camera className="w-5 h-5" />
             </button>
-          )}
+            <button
+              onClick={onRequestLocation}
+              disabled={disabled || locationLoading}
+              className={`p-1.5 rounded-full transition-colors disabled:opacity-30 ${
+                locationName ? "text-accent" : "text-muted hover:text-foreground"
+              }`}
+              title={locationName || "获取位置"}
+            >
+              {locationLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <MapPin className="w-5 h-5" />}
+            </button>
+          </div>
+          <div className="flex items-center gap-1">
+            {speechSupported && (
+              <button
+                onClick={toggleRecording}
+                disabled={disabled}
+                className={`p-1.5 rounded-full transition-colors disabled:opacity-30 ${
+                  isRecording ? "text-accent bg-accent/10" : "text-muted hover:text-foreground"
+                }`}
+                title={isRecording ? "停止录音" : "语音输入"}
+              >
+                {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              </button>
+            )}
+            <button
+              onClick={handleSend}
+              disabled={disabled || (!text.trim() && !image)}
+              className="p-1.5 rounded-full bg-accent-dim text-white transition-colors disabled:opacity-30"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         <input
@@ -188,28 +210,6 @@ export default function ChatInput({ onSend, disabled, locationName, onRequestLoc
           onChange={handleImageSelect}
           className="hidden"
         />
-
-        {/* Text input */}
-        <div className="flex-1 relative">
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={disabled}
-            placeholder="今天花了什么钱？"
-            rows={1}
-            className="w-full resize-none rounded-xl bg-neutral-900 border border-neutral-800 px-3.5 py-2.5 text-sm text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600 disabled:opacity-30 transition-colors"
-          />
-        </div>
-
-        {/* Send button */}
-        <button
-          onClick={handleSend}
-          disabled={disabled || (!text.trim() && !image)}
-          className="p-2.5 rounded-xl bg-accent text-black font-medium hover:bg-accent/90 transition-colors disabled:opacity-30"
-        >
-          <Send className="w-5 h-5" />
-        </button>
       </div>
     </div>
   );

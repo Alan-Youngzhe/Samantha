@@ -10,7 +10,7 @@ export interface ReviewRecord {
   sentiment: "positive" | "neutral" | "negative";
   comment: string;         // "比上次好喝"
   motive: string;          // emotional/impulse/habitual/social/need/reward
-  motiveConfidence: "high" | "medium" | "low"; // Nick 对动机推断的置信度
+  motiveConfidence: "high" | "medium" | "low"; // Samantha 对动机推断的置信度
   lat?: number;
   lng?: number;
   hour: number;            // 0-23
@@ -18,7 +18,7 @@ export interface ReviewRecord {
   timestamp: string;
   // Trust Score 体系
   trustScore: number;           // 0-100，评价可信度
-  verified: boolean;            // Nick 是否已回访验证
+  verified: boolean;            // Samantha 是否已回访验证
   verifiedAt?: string;          // 验证时间
   hasMatchingSpending: boolean; // 是否有对应的 [SPENDING] 记录
   hasLocationMatch: boolean;    // 经纬度是否匹配店铺区域
