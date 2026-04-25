@@ -59,16 +59,25 @@ export async function GET(req: Request) {
     const pois = (data.pois || []).map((p: Record<string, unknown>) => {
       const loc = (p.location as string || "").split(",");
       const bizExt = (p.biz_ext || {}) as Record<string, string>;
+      const photos = ((p.photos || []) as Array<Record<string, string>>)
+        .slice(0, 3)
+        .map((ph) => ph.url)
+        .filter(Boolean);
       return {
+        id: p.id as string || "",
         name: p.name as string,
         lat: parseFloat(loc[1]) || 0,
         lng: parseFloat(loc[0]) || 0,
         category: mapCategory(((p.typecode as string) || "")),
+        type: p.type as string || "",
         address: p.address as string || "",
         tel: p.tel as string || "",
         rating: bizExt.rating ? parseFloat(bizExt.rating) : undefined,
         avgPrice: bizExt.cost ? parseFloat(bizExt.cost) : undefined,
         distance: p.distance ? parseInt(p.distance as string, 10) : undefined,
+        photos,
+        openTime: bizExt.opentime || "",
+        mealOrdering: bizExt.meal_ordering || "",
       };
     });
 

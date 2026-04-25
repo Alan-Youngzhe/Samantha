@@ -7,6 +7,7 @@ import { getProfile } from "@/lib/memory";
 
 interface ShopPin {
   id: string;
+  poiId?: string;
   name: string;
   lat: number;
   lng: number;
@@ -20,9 +21,12 @@ interface ShopPin {
   address?: string;
   amapRating?: number;
   distance?: number;
+  photos?: string[];
+  openTime?: string;
 }
 
 interface PoiItem {
+  id: string;
   name: string;
   lat: number;
   lng: number;
@@ -31,6 +35,8 @@ interface PoiItem {
   rating?: number;
   avgPrice?: number;
   distance?: number;
+  photos?: string[];
+  openTime?: string;
 }
 
 // Default center: 龙华街道
@@ -108,6 +114,7 @@ export default function ExplorePage() {
           if (!poi.lat || !poi.lng) continue;
           merged.set(poi.name, {
             id: poi.name,
+            poiId: poi.id,
             name: poi.name,
             lat: poi.lat,
             lng: poi.lng,
@@ -118,6 +125,8 @@ export default function ExplorePage() {
             address: poi.address,
             amapRating: poi.rating,
             distance: poi.distance,
+            photos: poi.photos,
+            openTime: poi.openTime,
           });
         }
 
@@ -245,6 +254,19 @@ export default function ExplorePage() {
       {selectedPin ? (
         <div className="px-4 py-3">
           <div className="bg-card rounded-2xl p-4 border border-card-border">
+            {/* Photos carousel */}
+            {selectedPin.photos && selectedPin.photos.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto mb-3 -mx-1 px-1">
+                {selectedPin.photos.map((url, i) => (
+                  <img
+                    key={i}
+                    src={url}
+                    alt={`${selectedPin.name} ${i + 1}`}
+                    className="shrink-0 w-24 h-24 rounded-xl object-cover bg-surface"
+                  />
+                ))}
+              </div>
+            )}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-semibold text-foreground">{selectedPin.name}</h3>
@@ -270,8 +292,11 @@ export default function ExplorePage() {
                 ✕
               </button>
             </div>
-            {selectedPin.address && (
-              <p className="text-[11px] text-muted mb-2">{selectedPin.address}</p>
+            {(selectedPin.address || selectedPin.openTime) && (
+              <div className="flex items-center gap-2 mb-2 text-[11px] text-muted">
+                {selectedPin.address && <span>{selectedPin.address}</span>}
+                {selectedPin.openTime && <span>· {selectedPin.openTime}</span>}
+              </div>
             )}
             <div className="flex gap-3 mb-2">
               {selectedPin.avgPrice > 0 && (
