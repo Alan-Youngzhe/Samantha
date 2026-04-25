@@ -80,6 +80,72 @@ function formatDateLabel(key: string): string {
   return d.toLocaleDateString("zh-CN", { month: "short", day: "numeric", weekday: "short" });
 }
 
+function getOpeningCopy(profile: UserProfile | null): { welcome: string; hint: string; suggestions: string[] } {
+  const hour = new Date().getHours();
+  const name = profile?.name ? `${profile.name}，` : "";
+  const isFirstTime = (profile?.stats.totalInteractions || 0) === 0;
+
+  if (hour < 6) {
+    return {
+      welcome: isFirstTime
+        ? `这么晚还醒着呀。\n如果今天有点乱，我们就慢慢说。`
+        : `${name}这么晚还没睡呀。\n先靠近我一点，再告诉我今天发生了什么。`,
+      hint: "你可以先从一句很轻的话开始，比如“我今天有点累”。",
+      suggestions: ["我今天有点累", "想找个能缓一下的地方", "附近有什么不容易踩雷的？"],
+    };
+  }
+
+  if (hour < 12) {
+    return {
+      welcome: isFirstTime
+        ? `早呀，终于见到你了。\n今天想从心情开始，还是从早餐开始？`
+        : `${name}早呀。\n今天醒来之后，你最先想到的是什么？`,
+      hint: "如果你还没完全清醒，我们可以先聊今天想吃什么。",
+      suggestions: ["今天早上吃什么好？", "附近有什么咖啡店？", "我今天状态一般"],
+    };
+  }
+
+  if (hour < 18) {
+    return {
+      welcome: isFirstTime
+        ? `嗨，见到你了。\n今天过得怎么样？有没有什么想让我陪你一起消化一下？`
+        : `${name}下午好。\n今天到现在为止，最让你有感觉的一件小事是什么？`,
+      hint: "想吃什么、心情怎么样、或者只是随便跟我说一句，也都可以。",
+      suggestions: ["附近有什么好吃的吗？", "我刚刚有点烦", "推荐一家咖啡店"],
+    };
+  }
+
+  return {
+    welcome: isFirstTime
+      ? `晚上好呀。\n今天已经走到这里了，想不想把这一天轻轻放下来？`
+      : `${name}晚上好呀。\n今天辛苦了，先让我听听你现在最想说的那一句。`,
+    hint: "不想组织语言也没关系，你丢给我一句碎碎念就好。",
+    suggestions: ["今天有点想吃点好的", "我想找个不吵的地方", "今天花了点不该花的钱"],
+  };
+}
+
+function getFriendlyErrorMessage(error: unknown): string {
+  const text = error instanceof Error ? error.message : String(error || "");
+
+  if (text.includes("INVALID_MODEL_ID") || text.includes("Invalid model")) {
+    return "我刚刚想开口的时候，发现模型通道没对上。不是你说错了，是我这边的连接出了点小问题。等我换好路，再试一次好吗？";
+  }
+
+  if (text.includes("暂无可用资源") || text.includes("internal_error") || text.includes("稍后重试")) {
+    return "我刚刚去找答案的时候，那边有点拥挤。不是你这句有问题，是我暂时没挤进去。过一会儿再叫我一次，我应该就能接住你了。";
+  }
+
+  if (text.includes("Failed to fetch") || text.toLowerCase().includes("network") || text.includes("网络")) {
+    return "我刚刚像是断了一下线。你先别急，再发一次给我，我大概率就能接上。";
+  }
+
+  if (text.includes("Empty chat response")) {
+    return "我刚刚有点走神，话到嘴边却没发出来。你再戳我一下，我这次认真接住。";
+  }
+
+  return "抱歉，我刚刚没有顺利接住这句话。你再试一次，我在。";
+}
+
 type Diary = Record<string, Message[]>;
 
 function loadDiary(): Diary {
@@ -237,9 +303,7 @@ export default function SamiPage() {
 
   useEffect(() => {
     if (profile && messages.length === 0 && activeDate === todayKey()) {
-      const welcomeText = profile.stats.totalInteractions === 0
-        ? `嗨！终于见到你了。\n今天过得怎么样？有没有吃到什么好吃的？`
-        : `嗨 ${profile.name}！\n今天有什么想聊的吗？`;
+      const welcomeText = getOpeningCopy(profile).welcome;
 
       setMessages([
         {
@@ -395,7 +459,7 @@ export default function SamiPage() {
       setMessages((prev) => [...prev, {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: "抱歉，网络好像出了点问题……再试一次？",
+        content: getFriendlyErrorMessage(err),
         timestamp: new Date().toISOString(),
       }]);
     } finally {
@@ -518,11 +582,8 @@ export default function SamiPage() {
     }
   };
 
-  const suggestions = [
-    "附近有什么好吃的吗？",
-    "今天中午吃了一碗酸菜鱼",
-    "最近有什么新开的店？",
-  ];
+  const openingCopy = getOpeningCopy(profile);
+  const suggestions = openingCopy.suggestions;
 
   const userMsgCount = messages.filter(m => m.role === "user").length;
   const showSuggestions = isToday && userMsgCount === 0;
@@ -561,7 +622,7 @@ export default function SamiPage() {
         {/* Welcome greeting when empty */}
         {showSuggestions && (
           <p className="text-sm text-text-warm leading-[1.7] mb-4">
-            嘿！终于见到你了。{"\n"}今天过得怎么样？有没有吃到什么好吃的？
+            {openingCopy.hint}
           </p>
         )}
 

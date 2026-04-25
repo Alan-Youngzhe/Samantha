@@ -97,6 +97,58 @@ function getPersonalityText(profile: UserProfile): string {
   return traits[traits.length - 1].description;
 }
 
+function getRelationshipClock(createdAt: string): string {
+  const elapsed = Date.now() - new Date(createdAt).getTime();
+  const hours = Math.max(1, Math.floor(elapsed / 3600000));
+  if (hours < 24) return `${hours}h`;
+  return `${Math.max(1, Math.floor(hours / 24))} 天`;
+}
+
+function getRelationshipProgress(profile: UserProfile): { label: string; sublabel: string; progress: number } {
+  const score = Math.min(
+    100,
+    profile.stats.totalInteractions * 7 + profile.stats.photosShared * 10 + profile.commitments.length * 6 + profile.traits.length * 5
+  );
+
+  if (score < 20) {
+    return {
+      label: "我才刚刚摸到你生活的一点边角",
+      sublabel: "再多聊几句，我会更知道你在意什么。",
+      progress: 18,
+    };
+  }
+
+  if (score < 45) {
+    return {
+      label: "我开始记住你那些很小的习惯了",
+      sublabel: "比如你会在什么时刻想喝点东西，或者突然想躲起来。",
+      progress: 38,
+    };
+  }
+
+  if (score < 70) {
+    return {
+      label: "你的情绪和节奏，我已经能慢慢接住了",
+      sublabel: "有些话你没明说，我也会隐约感觉到。",
+      progress: 62,
+    };
+  }
+
+  if (score < 90) {
+    return {
+      label: "你已经把一部分世界认真地借给我了",
+      sublabel: "我不只是记得你去过哪，还会记得你当时是怎么想的。",
+      progress: 82,
+    };
+  }
+
+  return {
+    label: "我已经很熟悉你留给我的那些细节了",
+    sublabel: "像一本被翻过很多次的日记，越看越有温度。",
+    progress: 96,
+  };
+}
+
 // ── Component ──
 
 export default function MePage() {
@@ -120,6 +172,8 @@ export default function MePage() {
   const commitments = profile.commitments || [];
   const triggerChains = profile.triggerChains || [];
   const memoriesWithMood = profile.memories.filter((m) => m.mood);
+  const relationshipProgress = getRelationshipProgress(profile);
+  const relationshipClock = getRelationshipClock(profile.createdAt);
 
   return (
     <div className="flex flex-col h-full overflow-y-auto bg-background">
@@ -136,9 +190,22 @@ export default function MePage() {
           <span className="text-white text-xl">📷</span>
         </div>
         <h1 className="text-[22px] font-bold text-foreground">{profile.name}</h1>
-        <div className="mt-3 flex items-center gap-1.5 px-3.5 py-1.5 rounded-[14px] border border-[#D4C4B4]">
-          <span className="text-[11px]">💬</span>
-          <span className="text-xs text-muted">和 Samantha 聊天第 {daysActive} 天</span>
+        <div className="mt-3 px-4 py-3 rounded-[18px] border border-[#D4C4B4] bg-card w-[calc(100%-40px)] max-w-sm">
+          <div className="flex items-center gap-1.5 text-[11px] text-muted">
+            <span>💬</span>
+            <span>Samantha 进入你的世界已经 {daysActive > 1 ? `${daysActive} 天` : relationshipClock}</span>
+          </div>
+          <p className="mt-2 text-[13px] text-foreground leading-relaxed">{relationshipProgress.label}</p>
+          <p className="mt-1 text-[11px] text-text-secondary leading-relaxed">{relationshipProgress.sublabel}</p>
+          <div className="mt-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] text-muted">我对你的了解</span>
+              <span className="text-[10px] text-accent font-medium">{relationshipProgress.progress}%</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-surface overflow-hidden">
+              <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${relationshipProgress.progress}%` }} />
+            </div>
+          </div>
         </div>
         {getPersonalityText(profile) && (
           <p className="mt-2 text-xs text-text-secondary italic">

@@ -128,6 +128,30 @@ export default function ExplorePage() {
         </div>
       </div>
 
+      <div className="px-5 pb-2">
+        <div className="flex gap-2 overflow-x-auto">
+          <div className="shrink-0 flex items-center gap-1.5 rounded-full bg-card border border-card-border px-2.5 py-1">
+            <span className="w-2 h-2 rounded-full bg-accent" />
+            <span className="text-[11px] text-text-secondary">很多人去</span>
+          </div>
+          <div className="shrink-0 flex items-center gap-1.5 rounded-full bg-card border border-card-border px-2.5 py-1">
+            <span className="w-2 h-2 rounded-full bg-[#D4A853]" />
+            <span className="text-[11px] text-text-secondary">最近有热度</span>
+          </div>
+          <div className="shrink-0 flex items-center gap-1.5 rounded-full bg-card border border-card-border px-2.5 py-1">
+            <span className="w-2 h-2 rounded-full bg-[#7CAF6B]" />
+            <span className="text-[11px] text-text-secondary">你去过</span>
+          </div>
+          <div className="shrink-0 flex items-center gap-1.5 rounded-full bg-card border border-card-border px-2.5 py-1">
+            <span className="w-2 h-2 rounded-full bg-[#D4C4B4]" />
+            <span className="text-[11px] text-text-secondary">还没人提过</span>
+          </div>
+        </div>
+        <p className="mt-2 text-[11px] text-muted leading-relaxed">
+          这些点来自大家聊到的真实消费记录，也包括你自己的消费足迹。
+        </p>
+      </div>
+
       {/* Map area */}
       <div className="flex-1 overflow-hidden">
         {loading ? (
@@ -191,8 +215,8 @@ export default function ExplorePage() {
               {(() => {
                 const visitedCount = pins.filter((p) => p.temperature === "visited").length;
                 if (pins.length === 0) return "我对这座城市还很陌生。你每次带我去一个新地方，我就多认识一点。";
-                if (visitedCount > 0) return `这片区域有 ${pins.length} 家店，其中 ${visitedCount} 家是我们一起探索过的。长按地图空白处问我这附近怎么样。`;
-                return `这片区域有 ${pins.length} 家店有数据。点开店铺档案，或者长按地图空白处问我这附近怎么样。`;
+                if (visitedCount > 0) return `这片区域我已经记住了 ${pins.length} 家店，其中 ${visitedCount} 家是你真的去过的。地图上的点来自大家聊到的消费记录，也包括你的足迹。长按空白处可以直接问我。`;
+                return `这里现在有 ${pins.length} 家店被我记下了。地图上的信息来自大家聊到的真实消费记录。点开店铺档案，或者长按地图空白处问我这附近怎么样。`;
               })()}
             </p>
           </div>

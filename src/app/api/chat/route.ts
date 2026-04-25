@@ -159,6 +159,14 @@ function stripMarkdownFormatting(text: string): string {
     .trim();
 }
 
+function stripInternalMarkers(text: string): string {
+  return text
+    .replace(/\s*\[[A-Z][A-Z0-9_]{2,}\]/g, "")
+    .replace(/[ \t]+([，。！？；：,.!?;:])/g, "$1")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function createTraceEvent(
   type: AgentTraceEvent["type"],
   message: string,
@@ -648,7 +656,7 @@ async function finalizeChatResponse(args: {
     .replace(/\n?\[VERIFY\]:\s*.+/g, "")
     .replace(/\n?\[INTEL\]:\s*.+/g, "")
     .trim();
-  const normalizedText = stripMarkdownFormatting(cleanText);
+  const normalizedText = stripInternalMarkers(stripMarkdownFormatting(cleanText));
 
   return {
     text: normalizedText,

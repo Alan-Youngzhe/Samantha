@@ -16,6 +16,14 @@ interface ChatMessageProps {
   agent?: AgentMeta;
 }
 
+ function sanitizeVisibleContent(text: string): string {
+   return text
+     .replace(/\s*\[[A-Z][A-Z0-9_]{2,}\]/g, "")
+     .replace(/[ \t]+([，。！？；：,.!?;:])/g, "$1")
+     .replace(/\n{3,}/g, "\n\n")
+     .trim();
+ }
+
 export default function ChatMessage({
   role,
   content,
@@ -26,6 +34,7 @@ export default function ChatMessage({
 }: ChatMessageProps) {
   const isUser = role === "user";
   const isProactive = role === "proactive";
+  const displayContent = isUser ? content : sanitizeVisibleContent(content);
   const time = timestamp
     ? new Date(timestamp).toLocaleTimeString("zh-CN", {
         hour: "2-digit",
@@ -45,7 +54,7 @@ export default function ChatMessage({
             <span className="text-[11px] text-muted">{time}</span>
           </div>
           <div className="rounded-2xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed bg-accent/5 border border-accent/10 text-foreground">
-            {content}
+            {displayContent}
           </div>
         </div>
       </div>
@@ -79,7 +88,7 @@ export default function ChatMessage({
               : "bg-background border border-card-border text-foreground rounded-tl-sm"
           }`}
         >
-          {content}
+          {displayContent}
         </div>
         {!isUser && agent && (
           <div className="mt-1.5 px-1 text-[11px] text-muted">
