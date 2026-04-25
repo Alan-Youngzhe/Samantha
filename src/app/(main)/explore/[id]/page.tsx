@@ -12,6 +12,7 @@ interface Review {
   price: number;
   comment: string;
   sentiment: "positive" | "neutral" | "negative";
+  motive?: string;
   lat?: number;
   lng?: number;
   trustScore: number;
@@ -178,6 +179,41 @@ export default function ShopArchivePage() {
               )}
             </div>
           </div>
+
+          {/* 适合场景 */}
+          {(() => {
+            const motiveCount: Record<string, number> = {};
+            const hourCount: Record<number, number> = {};
+            for (const r of reviews) {
+              if (r.motive) motiveCount[r.motive] = (motiveCount[r.motive] || 0) + 1;
+              const h = new Date(r.timestamp).getHours();
+              hourCount[h] = (hourCount[h] || 0) + 1;
+            }
+            const total = reviews.length;
+            const tags: string[] = [];
+            const socialRatio = (motiveCount["social"] || 0) / total;
+            const rewardRatio = (motiveCount["reward"] || 0) / total;
+            const emotionalRatio = ((motiveCount["emotional"] || 0) + (motiveCount["impulse"] || 0)) / total;
+            const eveningCount = Object.entries(hourCount).filter(([h]) => parseInt(h) >= 18).reduce((s, [, c]) => s + c, 0);
+            if (socialRatio >= 0.3) tags.push("👥 适合和朋友去");
+            if (rewardRatio >= 0.25) tags.push("🎁 适合犒劳自己");
+            if (emotionalRatio >= 0.35) tags.push("💭 情绪驱动的选择");
+            if (eveningCount / total >= 0.4) tags.push("🌙 适合晚上去坐坐");
+            if (sentimentCounts.positive / total >= 0.7) tags.push("👍 口碑不错");
+            if (tags.length === 0) return null;
+            return (
+              <div className="px-5 pb-4">
+                <div className="bg-card rounded-2xl border border-card-border p-4">
+                  <h2 className="text-sm font-semibold text-foreground mb-2">适合场景</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((t) => (
+                      <span key={t} className="px-2.5 py-1 rounded-full bg-surface text-[12px] text-foreground leading-snug">{t}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Review list */}
           <div className="px-5 pb-8 space-y-3">

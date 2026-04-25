@@ -89,6 +89,105 @@ function getEmotionalRatio(profile: UserProfile): number {
   return Math.round((emotionalCount / spendings.length) * 100);
 }
 
+const CATEGORY_EMOJI: Record<string, string> = {
+  coffee: "☕",
+  food: "🍜",
+  shopping: "🛍️",
+  entertainment: "🎬",
+  transport: "🚇",
+  daily: "🧴",
+  other: "📦",
+};
+
+const CATEGORY_LABEL: Record<string, string> = {
+  coffee: "咖啡",
+  food: "餐饮",
+  shopping: "购物",
+  entertainment: "娱乐",
+  transport: "交通",
+  daily: "日用",
+  other: "其他",
+};
+
+function getSpendingNarrative(profile: UserProfile): string[] {
+  const spendings = profile.spendings || [];
+  if (spendings.length < 2) return [];
+  const tags: string[] = [];
+
+  // 时段×品类交叉
+  const peakHour = getPeakHourRaw(profile);
+  const topCat = getTopCategoryRaw(profile);
+  if (peakHour >= 12 && peakHour < 18 && topCat === "coffee") {
+    tags.push("下午会想喝点东西 ☕");
+  } else if (peakHour >= 18 && topCat === "food") {
+    tags.push("晚上喜欢出去吃 🍜");
+  } else if (peakHour < 12 && topCat === "coffee") {
+    tags.push("早上离不开咖啡 ☕");
+  } else if (topCat) {
+    tags.push(`${CATEGORY_EMOJI[topCat] || "📦"} ${CATEGORY_LABEL[topCat] || topCat}是你的常客`);
+  }
+
+  // 情绪动机
+  const emotionalRatio = getEmotionalRatio(profile);
+  if (emotionalRatio >= 60) {
+    tags.push("心情不好的时候容易冲动买 🛍️");
+  } else if (emotionalRatio >= 35) {
+    tags.push("消费里有一半跟心情有关 💭");
+  }
+
+  // 消费态度
+  const avg = getAvgSpending(profile);
+  if (avg >= 80) {
+    tags.push("你对自己挺大方的 💰");
+  } else if (avg >= 40 && avg < 80) {
+    tags.push("花钱不算大手大脚 🤏");
+  } else if (avg > 0 && avg < 40) {
+    tags.push("你挺省的 🫙");
+  }
+
+  return tags.slice(0, 3);
+}
+
+function getPeakHourRaw(profile: UserProfile): number {
+  const spendings = profile.spendings || [];
+  if (spendings.length === 0) return 12;
+  const hourCount: Record<number, number> = {};
+  for (const s of spendings) {
+    const h = new Date(s.timestamp).getHours();
+    hourCount[h] = (hourCount[h] || 0) + 1;
+  }
+  const sorted = Object.entries(hourCount).sort((a, b) => b[1] - a[1]);
+  return parseInt(sorted[0][0]);
+}
+
+function getTopCategoryRaw(profile: UserProfile): string {
+  const spendings = profile.spendings || [];
+  if (spendings.length === 0) return "";
+  const catCount: Record<string, number> = {};
+  for (const s of spendings) {
+    catCount[s.category] = (catCount[s.category] || 0) + 1;
+  }
+  const sorted = Object.entries(catCount).sort((a, b) => b[1] - a[1]);
+  return sorted[0][0];
+}
+
+function getTimeDistribution(profile: UserProfile): { label: string; count: number; emoji: string }[] {
+  const spendings = profile.spendings || [];
+  const slots = [
+    { label: "上午", range: [6, 12], emoji: "🌅" },
+    { label: "午间", range: [12, 14], emoji: "🍱" },
+    { label: "下午", range: [14, 18], emoji: "☕" },
+    { label: "晚间", range: [18, 24], emoji: "🌙" },
+  ];
+  return slots.map((slot) => {
+    const count = spendings.filter((s) => {
+      const h = new Date(s.timestamp).getHours();
+      return h >= slot.range[0] && h < slot.range[1];
+    }).length;
+    return { label: slot.label, count, emoji: slot.emoji };
+  });
+}
+
 function getPersonalityText(profile: UserProfile): string {
   const traits = profile.traits || [];
   const personalityTrait = traits.find((t) => t.category === "personality");
@@ -318,25 +417,75 @@ export default function MePage() {
       {/* 5. 消费习惯 */}
       <div className="mx-4 mb-6">
         <div className="bg-card rounded-2xl p-4 border border-card-border">
-          <h2 className="text-[15px] font-semibold text-foreground mb-2.5">消费习惯</h2>
-          <div className="grid grid-cols-2 gap-2 mb-2">
-            <div className="bg-surface rounded-[10px] py-2.5 text-center">
-              <p className="text-lg font-bold text-foreground">¥{getAvgSpending(profile) || "—"}</p>
-              <p className="text-[10px] text-muted mt-1">均单价</p>
-            </div>
-            <div className="bg-surface rounded-[10px] py-2.5 text-center">
-              <p className="text-lg font-bold text-foreground">{getTopCategory(profile)}</p>
-              <p className="text-[10px] text-muted mt-1">最爱品类</p>
-            </div>
-          </div>
+          <h2 className="text-[15px] font-semibold text-foreground mb-3">消费习惯</h2>
+
+          {/* 情绪标签行 */}
+          {(() => {
+            const narrative = getSpendingNarrative(profile);
+            if (narrative.length > 0) {
+              return (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {narrative.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-2.5 py-1 rounded-full bg-surface text-[12px] text-foreground leading-snug"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              );
+            }
+            return null;
+          })()}
+
+          {/* 时段分布横条 */}
+          {(() => {
+            const dist = getTimeDistribution(profile);
+            const maxCount = Math.max(...dist.map((d) => d.count), 1);
+            const hasData = dist.some((d) => d.count > 0);
+            if (!hasData) return null;
+            return (
+              <div className="mb-3">
+                <div className="flex items-end gap-1.5 h-10">
+                  {dist.map((d) => (
+                    <div key={d.label} className="flex-1 flex flex-col items-center gap-0.5">
+                      <div
+                        className="w-full rounded-t-sm bg-accent/60 transition-all duration-300"
+                        style={{ height: `${Math.max((d.count / maxCount) * 28, d.count > 0 ? 4 : 0)}px` }}
+                      />
+                      <span className="text-[9px] text-muted">{d.emoji}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-1.5 mt-0.5">
+                  {dist.map((d) => (
+                    <div key={d.label} className="flex-1 text-center">
+                      <span className="text-[9px] text-text-secondary">{d.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 辅助数字 2×2 */}
           <div className="grid grid-cols-2 gap-2">
-            <div className="bg-surface rounded-[10px] py-2.5 text-center">
-              <p className="text-lg font-bold text-foreground">{getPeakTime(profile)}</p>
-              <p className="text-[10px] text-muted mt-1">高频时段</p>
+            <div className="bg-surface rounded-[10px] py-2 text-center">
+              <p className="text-[15px] font-bold text-foreground">¥{getAvgSpending(profile) || "—"}</p>
+              <p className="text-[10px] text-muted mt-0.5">均单价</p>
             </div>
-            <div className="bg-surface rounded-[10px] py-2.5 text-center">
-              <p className="text-lg font-bold text-foreground">{getEmotionalRatio(profile)}%</p>
-              <p className="text-[10px] text-muted mt-1">跟心情有关</p>
+            <div className="bg-surface rounded-[10px] py-2 text-center">
+              <p className="text-[15px] font-bold text-foreground">{getTopCategory(profile)}</p>
+              <p className="text-[10px] text-muted mt-0.5">最爱品类</p>
+            </div>
+            <div className="bg-surface rounded-[10px] py-2 text-center">
+              <p className="text-[15px] font-bold text-foreground">{getPeakTime(profile)}</p>
+              <p className="text-[10px] text-muted mt-0.5">高频时段</p>
+            </div>
+            <div className="bg-surface rounded-[10px] py-2 text-center">
+              <p className="text-[15px] font-bold text-foreground">{getEmotionalRatio(profile)}%</p>
+              <p className="text-[10px] text-muted mt-0.5">跟心情有关</p>
             </div>
           </div>
         </div>

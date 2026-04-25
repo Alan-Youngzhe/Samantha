@@ -14,7 +14,10 @@ interface ShopPin {
   category: string;
   visitCount: number;
   avgPrice: number;
-  temperature: "hot" | "active" | "cold" | "unknown" | "visited";
+  temperature: "hot" | "active" | "caution" | "unknown" | "visited";
+  posRate?: number;
+  topComment?: string;
+  hasCaution?: boolean;
 }
 
 export default function ExplorePage() {
@@ -46,23 +49,30 @@ export default function ExplorePage() {
           const data = await res.json();
           const reviews = data.reviews || [];
           // Aggregate by store
-          const storeMap = new Map<string, { name: string; lat: number; lng: number; category: string; count: number; totalPrice: number }>();
+          const storeMap = new Map<string, { name: string; lat: number; lng: number; category: string; count: number; totalPrice: number; positive: number; neutral: number; negative: number; comments: string[] }>();
           for (const r of reviews) {
             if (!r.lat || !r.lng) continue;
             const key = r.storeName;
             if (!storeMap.has(key)) {
-              storeMap.set(key, { name: r.storeName, lat: r.lat, lng: r.lng, category: r.category, count: 0, totalPrice: 0 });
+              storeMap.set(key, { name: r.storeName, lat: r.lat, lng: r.lng, category: r.category, count: 0, totalPrice: 0, positive: 0, neutral: 0, negative: 0, comments: [] });
             }
             const s = storeMap.get(key)!;
             s.count++;
             s.totalPrice += r.price;
+            if (r.sentiment === "positive") s.positive++;
+            else if (r.sentiment === "negative") s.negative++;
+            else s.neutral++;
+            if (r.comment && s.comments.length < 3) s.comments.push(r.comment);
           }
           const result: ShopPin[] = [];
           storeMap.forEach((v, k) => {
+            const total = v.positive + v.neutral + v.negative;
+            const posRate = total > 0 ? Math.round((v.positive / total) * 100) : 0;
             let temperature: ShopPin["temperature"] = "unknown";
-            if (v.count >= 8) temperature = "hot";
-            else if (v.count >= 4) temperature = "active";
-            else if (v.count >= 1) temperature = "cold";
+            if (v.count >= 8 && posRate >= 60) temperature = "hot";
+            else if (v.count >= 4 && posRate >= 50) temperature = "active";
+            else if (v.count >= 2 && posRate < 50) temperature = "caution";
+            else if (v.count >= 1) temperature = "active";
             result.push({
               id: k,
               name: v.name,
@@ -72,6 +82,9 @@ export default function ExplorePage() {
               visitCount: v.count,
               avgPrice: Math.round(v.totalPrice / v.count),
               temperature,
+              posRate,
+              topComment: v.comments[0],
+              hasCaution: v.negative > 0 && total > 0 && (v.negative / total) > 0.3,
             });
           });
           // Add unknown stores as gray pins
@@ -143,6 +156,10 @@ export default function ExplorePage() {
             <span className="text-[11px] text-text-secondary">你去过</span>
           </div>
           <div className="shrink-0 flex items-center gap-1.5 rounded-full bg-card border border-card-border px-2.5 py-1">
+            <span className="w-2 h-2 rounded-full bg-[#E8564A] opacity-60" />
+            <span className="text-[11px] text-text-secondary">有人踩过雷</span>
+          </div>
+          <div className="shrink-0 flex items-center gap-1.5 rounded-full bg-card border border-card-border px-2.5 py-1">
             <span className="w-2 h-2 rounded-full bg-[#D4C4B4]" />
             <span className="text-[11px] text-text-secondary">还没人提过</span>
           </div>
@@ -175,7 +192,18 @@ export default function ExplorePage() {
         <div className="px-4 py-3">
           <div className="bg-card rounded-2xl p-4 border border-card-border">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-foreground">{selectedPin.name}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-foreground">{selectedPin.name}</h3>
+                {selectedPin.posRate != null && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                    selectedPin.posRate >= 70 ? "bg-[#7CAF6B]/10 text-[#7CAF6B]"
+                    : selectedPin.posRate >= 50 ? "bg-[#D4A853]/10 text-[#D4A853]"
+                    : "bg-[#E8564A]/10 text-[#E8564A]"
+                  }`}>
+                    {selectedPin.posRate}%好评
+                  </span>
+                )}
+              </div>
               <button
                 onClick={() => setSelectedPin(null)}
                 className="text-xs text-muted hover:text-foreground transition-colors"
@@ -197,6 +225,14 @@ export default function ExplorePage() {
                 <p className="text-[10px] text-muted">品类</p>
               </div>
             </div>
+            {selectedPin.hasCaution && (
+              <p className="text-[11px] text-[#E8564A] mb-2">⚠ 有人踩过雷</p>
+            )}
+            {selectedPin.topComment && (
+              <p className="text-[11px] text-text-secondary leading-relaxed mb-2 border-l-2 border-[#D4A853]/30 pl-2">
+                "{selectedPin.topComment}"
+              </p>
+            )}
             <a
               href={`/explore/${encodeURIComponent(selectedPin.id)}`}
               className="block text-center text-xs text-accent font-medium py-2 rounded-xl border border-accent/20 hover:bg-accent/5 transition-colors"

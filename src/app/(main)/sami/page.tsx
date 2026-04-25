@@ -60,6 +60,7 @@ interface Message {
   image?: string;
   timestamp: string;
   agent?: AgentMeta;
+  errorMeta?: ErrorMeta;
 }
 
 function toDateKey(ts: string): string {
@@ -124,26 +125,44 @@ function getOpeningCopy(profile: UserProfile | null): { welcome: string; hint: s
   };
 }
 
-function getFriendlyErrorMessage(error: unknown): string {
+type ErrorMeta = { message: string; retryable: boolean; hint?: string };
+
+function getFriendlyErrorMessage(error: unknown): ErrorMeta {
   const text = error instanceof Error ? error.message : String(error || "");
 
   if (text.includes("INVALID_MODEL_ID") || text.includes("Invalid model")) {
-    return "我刚刚想开口的时候，发现模型通道没对上。不是你说错了，是我这边的连接出了点小问题。等我换好路，再试一次好吗？";
+    return {
+      message: "我刚刚想开口的时候，发现模型通道没对上。不是你说错了，是我这边的连接出了点小问题。",
+      retryable: false,
+      hint: "请在设置中检查 API 配置是否正确。",
+    };
   }
 
   if (text.includes("暂无可用资源") || text.includes("internal_error") || text.includes("稍后重试")) {
-    return "我刚刚去找答案的时候，那边有点拥挤。不是你这句有问题，是我暂时没挤进去。过一会儿再叫我一次，我应该就能接住你了。";
+    return {
+      message: "我刚刚去找答案的时候，那边有点拥挤。不是你这句有问题，是我暂时没挤进去。",
+      retryable: true,
+    };
   }
 
   if (text.includes("Failed to fetch") || text.toLowerCase().includes("network") || text.includes("网络")) {
-    return "我刚刚像是断了一下线。你先别急，再发一次给我，我大概率就能接上。";
+    return {
+      message: "我刚刚像是断了一下线。你先别急，再发一次给我，我大概率就能接上。",
+      retryable: true,
+    };
   }
 
   if (text.includes("Empty chat response")) {
-    return "我刚刚有点走神，话到嘴边却没发出来。你再戳我一下，我这次认真接住。";
+    return {
+      message: "我刚刚有点走神，话到嘴边却没发出来。你再戳我一下，我这次认真接住。",
+      retryable: true,
+    };
   }
 
-  return "抱歉，我刚刚没有顺利接住这句话。你再试一次，我在。";
+  return {
+    message: "抱歉，我刚刚没有顺利接住这句话。你再试一次，我在。",
+    retryable: true,
+  };
 }
 
 type Diary = Record<string, Message[]>;
@@ -191,6 +210,38 @@ export default function SamiPage() {
   const [locationInfo, setLocationInfo] = useState<LocationInfo | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [agentProgress, setAgentProgress] = useState<AgentTraceEvent[]>([]);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("samantha_sound") === "1";
+  });
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const playNotifTone = useCallback(() => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = audioCtxRef.current || new AudioContext();
+      audioCtxRef.current = ctx;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(660, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.2);
+    } catch { /* browser may block audio */ }
+  }, [soundEnabled]);
+
+  const toggleSound = useCallback(() => {
+    setSoundEnabled((prev: boolean) => {
+      const next = !prev;
+      localStorage.setItem("samantha_sound", next ? "1" : "0");
+      return next;
+    });
+  }, []);
 
   const messages = diary[activeDate] || [];
   const setMessages = useCallback((updater: Message[] | ((prev: Message[]) => Message[])) => {
@@ -438,6 +489,7 @@ export default function SamiPage() {
         agent: data.agent,
       };
       setMessages((prev) => [...prev, aiMsg]);
+      playNotifTone();
 
       let updatedProfile = addMemory(profile, {
         type: image ? "photo" : "text",
@@ -456,11 +508,13 @@ export default function SamiPage() {
       setProfile(updatedProfile);
     } catch (err) {
       console.error(err);
+      const errMeta = getFriendlyErrorMessage(err);
       setMessages((prev) => [...prev, {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: getFriendlyErrorMessage(err),
+        content: errMeta.message,
         timestamp: new Date().toISOString(),
+        errorMeta: errMeta,
       }]);
     } finally {
       setAgentProgress([]);
@@ -612,6 +666,13 @@ export default function SamiPage() {
           >
             ☰
           </button>
+          <button
+            onClick={toggleSound}
+            className="text-text-secondary text-sm hover:text-foreground transition-colors px-2 py-1 rounded-lg"
+            title={soundEnabled ? "关闭提示音" : "开启提示音"}
+          >
+            {soundEnabled ? "🔔" : "🔕"}
+          </button>
         </div>
 
         {/* Samantha avatar */}
@@ -636,6 +697,11 @@ export default function SamiPage() {
             timestamp={msg.timestamp}
             userName={profile?.name}
             agent={msg.agent}
+            errorMeta={msg.errorMeta}
+            onRetry={msg.errorMeta?.retryable ? () => {
+              const lastUser = [...messages].reverse().find((m) => m.role === "user");
+              if (lastUser) handleSend(lastUser.content);
+            } : undefined}
           />
         ))}
 

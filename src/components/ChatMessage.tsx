@@ -7,6 +7,8 @@ type AgentMeta = {
   toolCalls: number;
 };
 
+type ErrorMeta = { message: string; retryable: boolean; hint?: string };
+
 interface ChatMessageProps {
   role: "user" | "assistant" | "proactive";
   content: string;
@@ -14,6 +16,8 @@ interface ChatMessageProps {
   timestamp?: string;
   userName?: string;
   agent?: AgentMeta;
+  errorMeta?: ErrorMeta;
+  onRetry?: () => void;
 }
 
  function sanitizeVisibleContent(text: string): string {
@@ -31,6 +35,8 @@ export default function ChatMessage({
   timestamp,
   userName,
   agent,
+  errorMeta,
+  onRetry,
 }: ChatMessageProps) {
   const isUser = role === "user";
   const isProactive = role === "proactive";
@@ -62,7 +68,7 @@ export default function ChatMessage({
   }
 
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4 ${isUser ? "animate-msg-slide-up" : "animate-msg-fade-in"}`}>
       <div className={`max-w-[88%] sm:max-w-[80%] ${isUser ? "order-2" : "order-1"}`}>
         {/* Avatar + Time */}
         <div className={`flex items-center gap-2 mb-1.5 ${isUser ? "justify-end" : "justify-start"}`}>
@@ -94,6 +100,21 @@ export default function ChatMessage({
           <div className="mt-1.5 px-1 text-[11px] text-muted">
             {agent.mode === "tool_use" ? "已执行工具调用" : "已切换后端编排"}
             {agent.toolCalls > 0 ? ` · ${agent.toolCalls} 次` : ""}
+          </div>
+        )}
+        {!isUser && errorMeta && (
+          <div className="mt-1.5 px-1">
+            {errorMeta.hint && (
+              <p className="text-[11px] text-muted leading-relaxed">{errorMeta.hint}</p>
+            )}
+            {errorMeta.retryable && onRetry && (
+              <button
+                onClick={onRetry}
+                className="mt-1.5 text-[11px] text-accent font-medium hover:underline"
+              >
+                再试一次
+              </button>
+            )}
           </div>
         )}
       </div>

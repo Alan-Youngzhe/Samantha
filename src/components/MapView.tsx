@@ -61,7 +61,7 @@ interface ShopPin {
   category: string;
   visitCount: number;
   avgPrice: number;
-  temperature: "hot" | "active" | "cold" | "unknown" | "visited";
+  temperature: "hot" | "active" | "caution" | "unknown" | "visited";
 }
 
 interface MapViewProps {
@@ -109,20 +109,20 @@ function loadAMapScript(): Promise<void> {
 const temperatureColors: Record<ShopPin["temperature"], string> = {
   hot: "#E8564A",
   active: "#D4A853",
-  cold: "#D4A853",
+  caution: "#E8564A",
   unknown: "#D4C4B4",
   visited: "#7CAF6B",
 };
 
 function createPinHTML(pin: ShopPin): string {
   const color = temperatureColors[pin.temperature];
-  const label = pin.temperature === "unknown" ? "?" : pin.temperature === "visited" ? "你" : String(pin.visitCount);
+  const label = pin.temperature === "unknown" ? "?" : pin.temperature === "visited" ? "你" : pin.temperature === "caution" ? "!" : String(pin.visitCount);
   const badge = pin.temperature === "hot"
     ? "🔥"
     : pin.temperature === "active"
       ? "✦"
-      : pin.temperature === "cold"
-        ? "·"
+      : pin.temperature === "caution"
+        ? "⚠"
         : pin.temperature === "visited"
           ? "★"
           : "?";
@@ -130,9 +130,11 @@ function createPinHTML(pin: ShopPin): string {
     ? "0 0 0 8px rgba(232,86,74,0.16), 0 8px 20px rgba(232,86,74,0.28)"
     : pin.temperature === "active"
       ? "0 0 0 6px rgba(212,168,83,0.14), 0 6px 16px rgba(212,168,83,0.22)"
-      : pin.temperature === "visited"
-        ? "0 0 0 6px rgba(124,175,107,0.16), 0 6px 16px rgba(124,175,107,0.22)"
-        : "0 4px 12px rgba(44,24,16,0.15)";
+      : pin.temperature === "caution"
+        ? "0 0 0 6px rgba(232,86,74,0.10), 0 6px 16px rgba(232,86,74,0.18)"
+        : pin.temperature === "visited"
+          ? "0 0 0 6px rgba(124,175,107,0.16), 0 6px 16px rgba(124,175,107,0.22)"
+          : "0 4px 12px rgba(44,24,16,0.15)";
   const scale = pin.temperature === "hot" ? "scale(1.08)" : "scale(1)";
   const nameColor = pin.temperature === "unknown" ? "#8B7355" : "#4A3526";
   const subtitle = pin.temperature === "unknown"
@@ -141,9 +143,11 @@ function createPinHTML(pin: ShopPin): string {
       ? "很多人去"
       : pin.temperature === "active"
         ? "有热度"
-        : pin.temperature === "visited"
-          ? "你去过"
-          : "刚有人提过";
+        : pin.temperature === "caution"
+          ? "有人踩雷"
+          : pin.temperature === "visited"
+            ? "你去过"
+            : "刚有人提过";
   return `
     <div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;">
       <div style="position:relative;display:flex;flex-direction:column;align-items:center;transform:${scale};transition:transform 160ms ease;">
