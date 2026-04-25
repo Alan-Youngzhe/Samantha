@@ -535,6 +535,7 @@ export default function SamiPage() {
             e.preventDefault();
             const p = loadDemoData();
             setProfile(p);
+            setDiary(loadDiary());
             setShowOnboard(false);
           }}
         >

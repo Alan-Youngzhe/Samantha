@@ -145,11 +145,11 @@ export default function ExplorePage() {
         <div className="flex gap-2 overflow-x-auto">
           <div className="shrink-0 flex items-center gap-1.5 rounded-full bg-card border border-card-border px-2.5 py-1">
             <span className="w-2 h-2 rounded-full bg-accent" />
-            <span className="text-[11px] text-text-secondary">很多人去</span>
+            <span className="text-[11px] text-text-secondary">口碑好·很多人去</span>
           </div>
           <div className="shrink-0 flex items-center gap-1.5 rounded-full bg-card border border-card-border px-2.5 py-1">
             <span className="w-2 h-2 rounded-full bg-[#D4A853]" />
-            <span className="text-[11px] text-text-secondary">最近有热度</span>
+            <span className="text-[11px] text-text-secondary">有热度</span>
           </div>
           <div className="shrink-0 flex items-center gap-1.5 rounded-full bg-card border border-card-border px-2.5 py-1">
             <span className="w-2 h-2 rounded-full bg-[#7CAF6B]" />
@@ -165,7 +165,7 @@ export default function ExplorePage() {
           </div>
         </div>
         <p className="mt-2 text-[11px] text-muted leading-relaxed">
-          这些点来自大家聊到的真实消费记录，也包括你自己的消费足迹。
+          地图上的点来自大家聊到的真实消费记录，也包括你自己的消费足迹。颜色代表口碑，不是广告。
         </p>
       </div>
 
@@ -194,7 +194,7 @@ export default function ExplorePage() {
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-semibold text-foreground">{selectedPin.name}</h3>
-                {selectedPin.posRate != null && (
+                {selectedPin.posRate != null && selectedPin.visitCount >= 3 && (
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
                     selectedPin.posRate >= 70 ? "bg-[#7CAF6B]/10 text-[#7CAF6B]"
                     : selectedPin.posRate >= 50 ? "bg-[#D4A853]/10 text-[#D4A853]"
@@ -225,10 +225,10 @@ export default function ExplorePage() {
                 <p className="text-[10px] text-muted">品类</p>
               </div>
             </div>
-            {selectedPin.hasCaution && (
+            {selectedPin.hasCaution && selectedPin.visitCount >= 3 && (
               <p className="text-[11px] text-[#E8564A] mb-2">⚠ 有人踩过雷</p>
             )}
-            {selectedPin.topComment && (
+            {selectedPin.topComment && selectedPin.visitCount >= 3 && (
               <p className="text-[11px] text-text-secondary leading-relaxed mb-2 border-l-2 border-[#D4A853]/30 pl-2">
                 "{selectedPin.topComment}"
               </p>

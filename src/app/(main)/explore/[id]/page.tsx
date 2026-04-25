@@ -182,6 +182,7 @@ export default function ShopArchivePage() {
 
           {/* 适合场景 */}
           {(() => {
+            if (reviews.length < 3) return null;
             const motiveCount: Record<string, number> = {};
             const hourCount: Record<number, number> = {};
             for (const r of reviews) {
