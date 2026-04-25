@@ -1,8 +1,57 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import type L from "leaflet";
-import FogOverlay, { type FogShopPoint } from "@/components/FogOverlay";
+import FogOverlay, { type FogPoint } from "@/components/FogOverlay";
+
+declare global {
+  interface Window {
+    AMap: typeof AMap;
+    _AMapSecurityConfig?: { securityJsCode: string };
+  }
+}
+
+declare namespace AMap {
+  class Map {
+    constructor(container: string | HTMLElement, opts?: MapOptions);
+    destroy(): void;
+    setCenter(center: [number, number]): void;
+    getCenter(): { getLng(): number; getLat(): number };
+    getZoom(): number;
+    on(event: string, handler: (...args: unknown[]) => void): void;
+    off(event: string, handler: (...args: unknown[]) => void): void;
+    lngLatToContainer(lnglat: LngLat | [number, number]): Pixel;
+  }
+  class LngLat {
+    constructor(lng: number, lat: number);
+    getLng(): number;
+    getLat(): number;
+  }
+  interface MapOptions {
+    zoom?: number;
+    center?: [number, number];
+    mapStyle?: string;
+    viewMode?: string;
+    features?: string[];
+    pitch?: number;
+  }
+  class Marker {
+    constructor(opts?: MarkerOptions);
+    setMap(map: Map | null): void;
+    on(event: string, handler: (...args: unknown[]) => void): void;
+    getPosition(): { getLng(): number; getLat(): number };
+  }
+  interface MarkerOptions {
+    position: [number, number];
+    content?: string | HTMLElement;
+    offset?: Pixel;
+    anchor?: string;
+  }
+  class Pixel {
+    constructor(x: number, y: number);
+    getX(): number;
+    getY(): number;
+  }
+}
 
 interface ShopPin {
   id: string;
@@ -27,6 +76,35 @@ const CITY_CENTERS: Record<string, [number, number]> = {
   "北京": [116.4074, 39.9042],
   "深圳": [114.0579, 22.5431],
 };
+
+const LONGHUA_BOUNDS = {
+  north: 31.1830,
+  south: 31.1720,
+  west: 121.4460,
+  east: 121.4580,
+};
+
+const AMAP_JS_KEY = process.env.NEXT_PUBLIC_AMAP_JS_KEY || "";
+const AMAP_SECURITY_CODE = process.env.NEXT_PUBLIC_AMAP_SECURITY_CODE || "";
+
+function loadAMapScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (window.AMap) {
+      resolve();
+      return;
+    }
+    // AMap 2.0 security config (if provided)
+    if (AMAP_SECURITY_CODE) {
+      window._AMapSecurityConfig = { securityJsCode: AMAP_SECURITY_CODE };
+    }
+    const script = document.createElement("script");
+    script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_JS_KEY}`;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load AMap JS API"));
+    document.head.appendChild(script);
+  });
+}
 
 const temperatureColors: Record<ShopPin["temperature"], string> = {
   hot: "#E8564A",
@@ -84,132 +162,130 @@ function createPinHTML(pin: ShopPin): string {
   `;
 }
 
+function extractLngLat(event: unknown): { lng: number; lat: number } | null {
+  if (!event || typeof event !== "object") return null;
+
+  const maybeEvent = event as {
+    lnglat?: {
+      getLng?: () => number;
+      getLat?: () => number;
+      lng?: number;
+      lat?: number;
+    };
+  };
+
+  const lnglat = maybeEvent.lnglat;
+  if (!lnglat) return null;
+
+  const lng = typeof lnglat.getLng === "function" ? lnglat.getLng() : lnglat.lng;
+  const lat = typeof lnglat.getLat === "function" ? lnglat.getLat() : lnglat.lat;
+
+  if (typeof lng !== "number" || typeof lat !== "number") return null;
+  return { lng, lat };
+ }
+
 export default function MapView({
   pins, onPinClick, onLongPressBlank, city,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.Marker[]>([]);
-  const leafletRef = useRef<typeof L | null>(null);
+  const mapRef = useRef<AMap.Map | null>(null);
+  const markersRef = useRef<AMap.Marker[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fogPoints, setFogPoints] = useState<FogShopPoint[]>([]);
+  const [fogPoints, setFogPoints] = useState<FogPoint[]>([]);
 
-  // Dynamic import Leaflet (SSR safe)
+  // Initialize map
   useEffect(() => {
-    let cancelled = false;
-    import("leaflet").then((mod) => {
-      if (cancelled) return;
-      const Leaf = mod.default || mod;
-      leafletRef.current = Leaf as typeof L;
+    if (!AMAP_JS_KEY) {
+      setError("请配置 NEXT_PUBLIC_AMAP_JS_KEY（Web端JS API 类型的 key）");
+      return;
+    }
 
-      if (!containerRef.current || mapRef.current) return;
-
-      const center = CITY_CENTERS[city || "上海"] || CITY_CENTERS["上海"];
-
-      const map = Leaf.map(containerRef.current, {
-        center: [center[1], center[0]],
-        zoom: 16,
-        zoomControl: false,
-        attributionControl: false,
+    let destroyed = false;
+    loadAMapScript()
+      .then(() => {
+        if (destroyed || !containerRef.current) return;
+        const map = new window.AMap.Map(containerRef.current, {
+          zoom: 16,
+          center: CITY_CENTERS[city || "上海"] || CITY_CENTERS["上海"],
+          mapStyle: "amap://styles/whitesmoke",
+          viewMode: "2D",
+          features: ["bg", "road", "building", "point"],
+        });
+        mapRef.current = map;
+        setMapReady(true);
+      })
+      .catch(() => {
+        if (!destroyed) setError("地图加载失败");
       });
 
-      Leaf.tileLayer(
-        "https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=2&style=8&x={x}&y={y}&z={z}",
-        { subdomains: "1234", maxZoom: 18, minZoom: 3 },
-      ).addTo(map);
-
-      mapRef.current = map;
-      setMapReady(true);
-    }).catch(() => {
-      if (!cancelled) setError("地图加载失败");
-    });
-
     return () => {
-      cancelled = true;
+      destroyed = true;
       if (mapRef.current) {
-        mapRef.current.remove();
+        mapRef.current.destroy();
         mapRef.current = null;
       }
     };
-  }, [city]);
+  }, []);
 
-  // Long press interaction
+  // Long press on map blank
   useEffect(() => {
-    if (!mapReady || !mapRef.current || !leafletRef.current || !onLongPressBlank) return;
+    if (!mapReady || !mapRef.current || !onLongPressBlank) return;
     const map = mapRef.current;
-    const Leaf = leafletRef.current;
-    const container = map.getContainer();
-
     let timer: ReturnType<typeof setTimeout> | null = null;
-    let startPos: { x: number; y: number } | null = null;
+    let pressLngLat: { lng: number; lat: number } | null = null;
 
-    const clear = () => {
+    const onDown = (...args: unknown[]) => {
+      pressLngLat = extractLngLat(args[0]);
+      timer = setTimeout(() => {
+        if (pressLngLat) {
+          onLongPressBlank(pressLngLat);
+          return;
+        }
+        const center = map.getCenter();
+        onLongPressBlank({ lng: center.getLng(), lat: center.getLat() });
+      }, 600);
+    };
+    const onUp = () => {
       if (timer) clearTimeout(timer);
-      timer = null;
-      startPos = null;
+      pressLngLat = null;
+    };
+    const onMove = () => {
+      if (timer) clearTimeout(timer);
+      pressLngLat = null;
     };
 
-    const resolve = (clientX: number, clientY: number) => {
-      const rect = container.getBoundingClientRect();
-      const pt = Leaf.point(clientX - rect.left, clientY - rect.top);
-      const ll = map.containerPointToLatLng(pt);
-      onLongPressBlank({ lng: ll.lng, lat: ll.lat });
-    };
-
-    const onTouchStart = (e: TouchEvent) => {
-      const t = e.touches[0];
-      startPos = { x: t.clientX, y: t.clientY };
-      timer = setTimeout(() => resolve(t.clientX, t.clientY), 600);
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      if (!startPos || !timer) return;
-      const t = e.touches[0];
-      if (Math.hypot(t.clientX - startPos.x, t.clientY - startPos.y) > 10) clear();
-    };
-    const onMouseDown = (e: MouseEvent) => {
-      startPos = { x: e.clientX, y: e.clientY };
-      timer = setTimeout(() => resolve(e.clientX, e.clientY), 600);
-    };
-    const onMouseMove = () => { if (timer) clear(); };
-
-    container.addEventListener("touchstart", onTouchStart, { passive: true });
-    container.addEventListener("touchmove", onTouchMove, { passive: true });
-    container.addEventListener("touchend", clear);
-    container.addEventListener("mousedown", onMouseDown);
-    container.addEventListener("mouseup", clear);
-    container.addEventListener("mousemove", onMouseMove);
+    map.on("mousedown", onDown);
+    map.on("mouseup", onUp);
+    map.on("mousemove", onMove);
+    map.on("touchstart", onDown);
+    map.on("touchend", onUp);
+    map.on("touchmove", onMove);
 
     return () => {
-      clear();
-      container.removeEventListener("touchstart", onTouchStart);
-      container.removeEventListener("touchmove", onTouchMove);
-      container.removeEventListener("touchend", clear);
-      container.removeEventListener("mousedown", onMouseDown);
-      container.removeEventListener("mouseup", clear);
-      container.removeEventListener("mousemove", onMouseMove);
+      if (timer) clearTimeout(timer);
+      pressLngLat = null;
     };
   }, [mapReady, onLongPressBlank]);
 
-  // Update markers
+  // Update markers when pins change
   useEffect(() => {
-    if (!mapReady || !mapRef.current || !leafletRef.current) return;
-    const map = mapRef.current;
-    const Leaf = leafletRef.current;
+    if (!mapReady || !mapRef.current) return;
 
-    markersRef.current.forEach((m) => m.remove());
+    // Clear old markers
+    markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current = [];
 
+    // Add new markers
     for (const pin of pins) {
-      const icon = Leaf.divIcon({
-        html: createPinHTML(pin),
-        className: "",
-        iconSize: [80, 60],
-        iconAnchor: [40, 55],
+      const marker = new window.AMap.Marker({
+        position: [pin.lng, pin.lat],
+        content: createPinHTML(pin),
+        anchor: "bottom-center",
       });
+      marker.setMap(mapRef.current);
 
-      const marker = Leaf.marker([pin.lat, pin.lng], { icon }).addTo(map);
-
+      // Click
       if (onPinClick) {
         marker.on("click", () => onPinClick(pin));
       }
@@ -218,30 +294,38 @@ export default function MapView({
     }
   }, [pins, mapReady, onPinClick]);
 
-  // Fog of war: project visited shops to pixel coords
+  // Fog of war: project 龙华街道 bounding box to pixel coords
   const updateFog = useCallback(() => {
     if (!mapRef.current) {
       setFogPoints([]);
       return;
     }
     const map = mapRef.current;
-    const points: FogShopPoint[] = pins
-      .filter((p) => p.temperature === "visited")
-      .map((pin) => {
-        const pt = map.latLngToContainerPoint([pin.lat, pin.lng]);
-        return { x: pt.x, y: pt.y, radius: 150 };
-      });
-    setFogPoints(points);
-  }, [pins]);
+    try {
+      const nw = map.lngLatToContainer([LONGHUA_BOUNDS.west, LONGHUA_BOUNDS.north]);
+      const se = map.lngLatToContainer([LONGHUA_BOUNDS.east, LONGHUA_BOUNDS.south]);
+      const x1 = nw.getX(), y1 = nw.getY(), x2 = se.getX(), y2 = se.getY();
+      if (!isFinite(x1) || !isFinite(y1) || !isFinite(x2) || !isFinite(y2)) {
+        setFogPoints([]);
+        return;
+      }
+      setFogPoints([
+        { x: x1, y: y1, weight: 0 },
+        { x: x2, y: y2, weight: 0 },
+      ]);
+    } catch {
+      setFogPoints([]);
+    }
+  }, []);
 
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
     const map = mapRef.current;
     updateFog();
-    map.on("move", updateFog);
+    map.on("moveend", updateFog);
     map.on("zoomend", updateFog);
     return () => {
-      map.off("move", updateFog);
+      map.off("moveend", updateFog);
       map.off("zoomend", updateFog);
     };
   }, [mapReady, updateFog]);
@@ -249,7 +333,10 @@ export default function MapView({
   if (error) {
     return (
       <div className="w-full h-full bg-[#F0E8DE] flex items-center justify-center">
-        <p className="text-sm text-muted">{error}</p>
+        <div className="text-center">
+          <p className="text-sm text-muted mb-1">{error}</p>
+          <p className="text-xs text-text-secondary">在 .env.local 中设置 NEXT_PUBLIC_AMAP_JS_KEY</p>
+        </div>
       </div>
     );
   }
@@ -262,7 +349,9 @@ export default function MapView({
           <span className="text-sm text-muted animate-pulse">加载地图中...</span>
         </div>
       )}
-      {mapReady && <FogOverlay visitedShops={fogPoints} />}
+
+      {/* Fog of war */}
+      {mapReady && <FogOverlay exploredPoints={fogPoints} />}
     </div>
   );
 }
