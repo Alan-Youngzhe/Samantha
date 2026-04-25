@@ -29,15 +29,21 @@ const MOOD_EMOJI: Record<string, string> = {
   "烦": "😤",
 };
 
-const TRAIT_LABELS: Record<string, string> = {
-  preference: "偏好",
-  habit: "习惯",
-  mood_pattern: "情绪模式",
-  social_style: "社交方式",
-  value: "价值观",
-  contradiction: "有意思的矛盾",
-  personality: "性格特征",
+const TRAIT_PREFIXES: Record<string, string[]> = {
+  preference: ["我发现你", "我注意到你"],
+  habit: ["有个事情我一直想说——", "我觉得你自己可能没意识到，"],
+  mood_pattern: ["我有点担心，", "我感觉到"],
+  social_style: ["我觉得你", "我看得出来你"],
+  value: ["跟你聊久了我发现，", "我喜欢你这一点——"],
+  contradiction: ["有个有意思的事——", "说个好玩的，"],
+  personality: ["我觉得你是那种", "和你聊天让我觉得你是"],
 };
+
+function traitToDiary(category: string, description: string): string {
+  const prefixes = TRAIT_PREFIXES[category] || ["我注意到"];
+  const prefix = prefixes[Math.floor(description.length % prefixes.length)];
+  return `${prefix}${description}`;
+}
 
 function getTopCategory(profile: UserProfile): string {
   const spendings = profile.spendings || [];
@@ -171,20 +177,19 @@ export default function MePage() {
         </div>
       </div>
 
-      {/* 2. Samantha 的观察 */}
+      {/* 2. Samantha 的心迹 */}
       {traits.length > 0 && (
         <div className="mx-4 mb-4">
           <div className="bg-card rounded-2xl p-4 border border-card-border">
-            <h2 className="text-[15px] font-semibold text-foreground mb-3">Samantha 的观察</h2>
-            <div className="space-y-2.5">
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-[15px] font-semibold text-foreground">Samantha 的心迹</h2>
+              <span className="text-[10px] text-muted">—— 她想对你说的话</span>
+            </div>
+            <div className="space-y-3">
               {traits.slice(-5).map((t, i) => (
-                <div key={i} className="flex items-start gap-2.5">
-                  <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-surface text-muted font-medium mt-0.5">
-                    {TRAIT_LABELS[t.category] || t.category}
-                  </span>
-                  <p className="text-[13px] text-text-secondary leading-relaxed">
-                    {t.description}
-                    {t.count > 1 && <span className="text-muted text-[11px] ml-1">({t.count}次)</span>}
+                <div key={i} className="pl-3 border-l-2 border-accent/20">
+                  <p className="text-[13px] text-foreground leading-relaxed">
+                    {traitToDiary(t.category, t.description)}
                   </p>
                 </div>
               ))}
