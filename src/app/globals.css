@@ -1,4 +1,10 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+.leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
 
 :root {
   --background: #FFF9F4;
