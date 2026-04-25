@@ -1,4 +1,5 @@
 import { SYSTEM_PROMPT } from "@/lib/prompt";
+import { amapGet } from "@/lib/amap-proxy";
 import { NextRequest, NextResponse } from "next/server";
 
 const API_BASE = process.env.ANTHROPIC_BASE_URL || "https://claude2.sssaicode.com/api";
@@ -66,6 +67,9 @@ const TOOL_SYSTEM_PROMPT = `${SYSTEM_PROMPT}
 - 当你需要了解附近店铺、某家店的真实评价、或用户近期上下文时，优先调用工具，不要猜。
 - 只要上下文提供了用户当前位置或可用坐标，而用户又在问“这附近 / 这里 / 这片区域 / 这个地方”，默认就是在问这个位置周边，不要装作没看到。
 - 当用户在问附近吃什么、喝什么、区域怎么样，且你手里有坐标时，优先使用 search_nearby_shops。
+- **主动查天气**：每次对话开始或用户讨论出门计划时，主动调用 get_weather，把天气信息自然融入回复（比如「外面在下雨，记得带伞」「今天挺暖和的，适合出去逛」）。不要等用户问。
+- **主动估路程**：当你推荐了某家店、讨论某个地点、或用户提到想去哪里时，主动调用 get_route 告诉用户过去要多久（比如「走过去大概 8 分钟」）。不要等用户问远不远。
+- **主动补详情**：当对话涉及某家具体店铺时，主动调用 get_place_detail 获取营业时间、评分等信息，自然地融入回复。
 - 你可以连续调用多个工具，但最多 3 轮。
 - 有了足够信息就停下来，给出像朋友一样自然的回答。
 - 工具结果是内部资料，不要把 JSON 或工具名直接展示给用户。`;
@@ -103,6 +107,43 @@ const AGENT_TOOLS = [
       properties: {
         focus: { type: "string", description: "你想重点了解的方向，比如 最近消费、承诺、心情、店铺偏好" },
       },
+    },
+  },
+  {
+    name: "get_route",
+    description: "查询从用户当前位置到目的地的步行或公交路线，返回距离和时长。当你推荐了某家店或用户提到某个地点时，主动调用来告诉用户过去要多久。",
+    input_schema: {
+      type: "object",
+      properties: {
+        origin_lat: { type: "number", description: "起点纬度（用户当前位置）" },
+        origin_lng: { type: "number", description: "起点经度" },
+        dest_lat: { type: "number", description: "终点纬度" },
+        dest_lng: { type: "number", description: "终点经度" },
+        dest_name: { type: "string", description: "目的地名称" },
+        mode: { type: "string", enum: ["walk", "transit"], description: "出行方式：walk 步行 / transit 公交，默认 walk" },
+      },
+      required: ["origin_lat", "origin_lng", "dest_lat", "dest_lng"],
+    },
+  },
+  {
+    name: "get_weather",
+    description: "查询当前城市天气和未来几天预报。每次对话开始时主动调用，在回复中自然地提醒用户天气状况，比如要带伞、有点冷、适合出门等。",
+    input_schema: {
+      type: "object",
+      properties: {
+        city: { type: "string", description: "城市 adcode，默认上海 310000" },
+      },
+    },
+  },
+  {
+    name: "get_place_detail",
+    description: "查询某家店铺的详细信息，包括营业时间、电话、评分、均价、图片。当推荐店铺或讨论某家店时主动调用，把关键信息自然融入回复。需要先通过 search_nearby_shops 获得 poi_id。",
+    input_schema: {
+      type: "object",
+      properties: {
+        poi_id: { type: "string", description: "高德 POI ID" },
+      },
+      required: ["poi_id"],
     },
   },
 ];
@@ -205,6 +246,17 @@ function formatToolStart(toolName: string, input: JsonRecord): string {
   if (toolName === "get_personal_context") {
     return "我先回忆一下你最近聊过的消费和心情。";
   }
+  if (toolName === "get_route") {
+    const dest = input.dest_name ? `去${input.dest_name}` : "到目的地";
+    const mode = input.mode === "transit" ? "公交" : "步行";
+    return `我帮你看看${mode}${dest}怎么走。`;
+  }
+  if (toolName === "get_weather") {
+    return "我去查一下今天的天气。";
+  }
+  if (toolName === "get_place_detail") {
+    return "我去翻翻这家店的详细资料。";
+  }
   return `我在调用 ${toolName}。`;
 }
 
@@ -224,6 +276,22 @@ function formatToolResult(toolName: string, output: ToolResultPayload): string {
   }
   if (toolName === "get_personal_context") {
     return "我把你最近的聊天线索重新串起来了。";
+  }
+  if (toolName === "get_route") {
+    const dist = output.meta?.distance;
+    const dur = output.meta?.duration;
+    if (dist && dur) return `${output.meta?.mode === "transit" ? "公交" : "步行"}约 ${dur} 分钟，${dist}。`;
+    return "查到路线了。";
+  }
+  if (toolName === "get_weather") {
+    const weather = output.meta?.weather;
+    const temp = output.meta?.temperature;
+    if (weather) return `今天${weather}，${temp || ""}。`;
+    return "查到天气了。";
+  }
+  if (toolName === "get_place_detail") {
+    const name = output.meta?.name;
+    return name ? `找到了「${name}」的详细资料。` : "找到详细资料了。";
   }
   return output.content.slice(0, 80);
 }
@@ -404,6 +472,116 @@ async function executeToolCall(
 
   if (toolName === "get_personal_context") {
     return buildPersonalContextResult(memoryContext, trustContext, typeof input.focus === "string" ? input.focus : undefined);
+  }
+
+  if (toolName === "get_route") {
+    const oLat = Number(input.origin_lat);
+    const oLng = Number(input.origin_lng);
+    const dLat = Number(input.dest_lat);
+    const dLng = Number(input.dest_lng);
+    const destName = String(input.dest_name || "目的地");
+    const mode = input.mode === "transit" ? "transit" : "walk";
+    if (!Number.isFinite(oLat) || !Number.isFinite(oLng) || !Number.isFinite(dLat) || !Number.isFinite(dLng)) {
+      return { content: "无法查询路线：缺少有效坐标。" };
+    }
+    try {
+      if (mode === "walk") {
+        const data = await amapGet("/v3/direction/walking", {
+          origin: `${oLng},${oLat}`,
+          destination: `${dLng},${dLat}`,
+        });
+        const route = data.route as Record<string, unknown> || {};
+        const paths = (route.paths || []) as Array<Record<string, unknown>>;
+        if (paths.length > 0) {
+          const p = paths[0];
+          const dist = Number(p.distance || 0);
+          const dur = Math.round(Number(p.duration || 0) / 60);
+          const distStr = dist >= 1000 ? `${(dist / 1000).toFixed(1)}公里` : `${dist}米`;
+          const steps = ((p.steps || []) as Array<Record<string, string>>).slice(0, 5).map(s => s.instruction).filter(Boolean);
+          return {
+            content: `步行到${destName}：约 ${distStr}，${dur} 分钟。\n路线：${steps.join(" → ") || "直线距离较近"}`,
+            meta: { distance: distStr, duration: dur, mode: "walk" },
+          };
+        }
+      } else {
+        const data = await amapGet("/v3/direction/transit/integrated", {
+          origin: `${oLng},${oLat}`,
+          destination: `${dLng},${dLat}`,
+          city: "上海",
+          cityd: "上海",
+        });
+        const route = data.route as Record<string, unknown> || {};
+        const transits = (route.transits || []) as Array<Record<string, unknown>>;
+        if (transits.length > 0) {
+          const t = transits[0];
+          const dist = Number(t.distance || 0);
+          const dur = Math.round(Number(t.duration || 0) / 60);
+          const distStr = dist >= 1000 ? `${(dist / 1000).toFixed(1)}公里` : `${dist}米`;
+          const cost = t.cost ? `${t.cost}元` : "";
+          return {
+            content: `公交到${destName}：约 ${distStr}，${dur} 分钟${cost ? `，费用约${cost}` : ""}。`,
+            meta: { distance: distStr, duration: dur, mode: "transit" },
+          };
+        }
+      }
+      return { content: `没有找到到${destName}的${mode === "walk" ? "步行" : "公交"}路线。` };
+    } catch {
+      return { content: "路线查询失败，稍后再试。" };
+    }
+  }
+
+  if (toolName === "get_weather") {
+    const city = String(input.city || "310000");
+    try {
+      const data = await amapGet("/v3/weather/weatherInfo", {
+        city,
+        extensions: "all",
+      });
+      const forecasts = (data.forecasts || []) as Array<Record<string, unknown>>;
+      if (forecasts.length > 0) {
+        const f = forecasts[0];
+        const casts = ((f.casts || []) as Array<Record<string, string>>).slice(0, 4);
+        const today = casts[0];
+        const lines = casts.map(c =>
+          `${c.date}：${c.dayweather}/${c.nightweather}，${c.daytemp}°~${c.nighttemp}°，${c.daywind}风${c.daypower}级`
+        );
+        return {
+          content: `${f.city} 天气预报：\n${lines.join("\n")}`,
+          meta: { weather: today?.dayweather, temperature: today ? `${today.daytemp}°~${today.nighttemp}°` : "", city: f.city },
+        };
+      }
+      return { content: "没有查到天气数据。" };
+    } catch {
+      return { content: "天气查询失败，稍后再试。" };
+    }
+  }
+
+  if (toolName === "get_place_detail") {
+    const poiId = String(input.poi_id || "").trim();
+    if (!poiId) return { content: "缺少店铺 ID。" };
+    try {
+      const data = await amapGet("/v3/place/detail", { id: poiId });
+      const pois = (data.pois || []) as Array<Record<string, unknown>>;
+      if (pois.length > 0) {
+        const p = pois[0];
+        const bizExt = (p.biz_ext || {}) as Record<string, string>;
+        const photos = ((p.photos || []) as Array<Record<string, string>>).slice(0, 3).map(ph => ph.url).filter(Boolean);
+        const parts: string[] = [`店名：${p.name}`];
+        if (p.address) parts.push(`地址：${p.address}`);
+        if (p.tel) parts.push(`电话：${p.tel}`);
+        if (bizExt.rating) parts.push(`评分：${bizExt.rating}`);
+        if (bizExt.cost) parts.push(`均价：¥${bizExt.cost}`);
+        if (bizExt.opentime || bizExt.open_time) parts.push(`营业时间：${bizExt.opentime || bizExt.open_time}`);
+        if (photos.length > 0) parts.push(`图片：${photos.join(" | ")}`);
+        return {
+          content: parts.join("\n"),
+          meta: { name: p.name, poiId, hasPhotos: photos.length > 0 },
+        };
+      }
+      return { content: "没有找到这家店的详细信息。" };
+    } catch {
+      return { content: "店铺详情查询失败，稍后再试。" };
+    }
   }
 
   return { content: `未知工具：${toolName}` };
