@@ -2,7 +2,7 @@
 
 import { NextResponse } from "next/server";
 
-const AMAP_KEY = process.env.AMAP_KEY || "";
+const AMAP_KEY = process.env.AMAP_KEY || process.env.NEXT_PUBLIC_AMAP_JS_KEY || "";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);

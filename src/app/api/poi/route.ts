@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const AMAP_KEY = process.env.AMAP_KEY || "";
+const AMAP_KEY = process.env.AMAP_KEY || process.env.NEXT_PUBLIC_AMAP_JS_KEY || "";
 
 const TYPE_MAP: Record<string, string> = {
   "050000": "food",

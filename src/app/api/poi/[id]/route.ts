@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const AMAP_KEY = process.env.AMAP_KEY || "";
+const AMAP_KEY = process.env.AMAP_KEY || process.env.NEXT_PUBLIC_AMAP_JS_KEY || "";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
