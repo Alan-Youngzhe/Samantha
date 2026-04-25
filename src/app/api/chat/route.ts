@@ -209,12 +209,18 @@ function formatToolStart(toolName: string, input: JsonRecord): string {
 }
 
 function formatToolResult(toolName: string, output: ToolResultPayload): string {
-  const count = Number(output.meta?.count ?? 0);
+  const reviewCount = Number(output.meta?.reviewCount ?? output.meta?.count ?? 0);
+  const poiCount = Number(output.meta?.poiCount ?? 0);
   if (toolName === "search_nearby_shops") {
-    return count > 0 ? `我找到了附近 ${count} 条可参考的消费情报。` : "附近暂时没翻到太有用的情报。";
+    const parts: string[] = [];
+    if (reviewCount > 0) parts.push(`${reviewCount} 条消费情报`);
+    if (poiCount > 0) parts.push(`${poiCount} 家实时店铺`);
+    return parts.length > 0 ? `我找到了附近 ${parts.join(" + ")}。` : "附近暂时没翻到太有用的情报。";
   }
   if (toolName === "search_store_reviews") {
-    return count > 0 ? `这家店我翻到了 ${count} 条相关情报。` : "这家店我暂时还没查到现成情报。";
+    if (reviewCount > 0) return `这家店我翻到了 ${reviewCount} 条相关情报。`;
+    if (poiCount > 0) return `社区暂无情报，但高德找到了 ${poiCount} 家相关店铺。`;
+    return "这家店我暂时还没查到现成情报。";
   }
   if (toolName === "get_personal_context") {
     return "我把你最近的聊天线索重新串起来了。";
@@ -292,6 +298,22 @@ async function fetchReviewsByStore(origin: string, store: string) {
   return res.json();
 }
 
+async function fetchPoiNearby(origin: string, lat: number, lng: number, radius = 1000) {
+  try {
+    const res = await fetch(`${origin}/api/poi?lat=${lat}&lng=${lng}&radius=${radius}&types=050000|050500|060100`);
+    if (!res.ok) return { pois: [] };
+    return res.json();
+  } catch { return { pois: [] }; }
+}
+
+async function fetchPoiByKeyword(origin: string, keyword: string) {
+  try {
+    const res = await fetch(`${origin}/api/poi?keyword=${encodeURIComponent(keyword)}&types=050000|050500|060100`);
+    if (!res.ok) return { pois: [] };
+    return res.json();
+  } catch { return { pois: [] }; }
+}
+
 function buildPersonalContextResult(memoryContext: string | undefined, trustContext: JsonRecord | undefined, focus?: string): ToolResultPayload {
   const sections = (memoryContext || "")
     .split(/\n\n+/)
@@ -327,20 +349,56 @@ async function executeToolCall(
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       return { content: "无法查询附近情报：缺少有效经纬度。" };
     }
-    const data = await fetchReviewsByLocation(origin, lat, lng, Number.isFinite(radius) ? radius : 500);
+    const [reviewData, poiData] = await Promise.all([
+      fetchReviewsByLocation(origin, lat, lng, Number.isFinite(radius) ? radius : 500),
+      fetchPoiNearby(origin, lat, lng, Math.max(Number.isFinite(radius) ? radius : 500, 1000)),
+    ]);
+    const pois = (poiData.pois || []) as Array<{ name: string; category: string; address: string; rating?: number; avgPrice?: number; distance?: number }>;
+    const parts: string[] = [];
+    if (reviewData.summary) parts.push("【社区消费情报】\n" + reviewData.summary);
+    if (pois.length > 0) {
+      const poiLines = pois.slice(0, 15).map((p) => {
+        const tags: string[] = [p.category, p.address];
+        if (p.rating) tags.push(`评分${p.rating}`);
+        if (p.avgPrice) tags.push(`均价¥${p.avgPrice}`);
+        if (p.distance) tags.push(`${p.distance}m`);
+        return `- ${p.name}（${tags.join("，")}）`;
+      });
+      parts.push("【高德实时店铺】\n" + poiLines.join("\n"));
+    }
     return {
-      content: data.summary || "附近暂无可用情报。",
-      meta: { count: data.count || 0, lat, lng, radius },
+      content: parts.join("\n\n") || "附近暂无可用情报。",
+      meta: { reviewCount: reviewData.count || 0, poiCount: pois.length, lat, lng, radius },
     };
   }
 
   if (toolName === "search_store_reviews") {
     const store = String(input.store || "").trim();
     if (!store) return { content: "无法查询店铺情报：缺少店铺关键词。" };
-    const data = await fetchReviewsByStore(origin, store);
+    const reviewData = await fetchReviewsByStore(origin, store);
+    if (reviewData.count > 0) {
+      return {
+        content: reviewData.summary || `关于「${store}」的情报。`,
+        meta: { count: reviewData.count, store },
+      };
+    }
+    const poiData = await fetchPoiByKeyword(origin, store);
+    const pois = (poiData.pois || []) as Array<{ name: string; category: string; address: string; rating?: number; avgPrice?: number; distance?: number }>;
+    if (pois.length > 0) {
+      const lines = pois.slice(0, 5).map((p) => {
+        const tags: string[] = [p.address];
+        if (p.rating) tags.push(`评分${p.rating}`);
+        if (p.avgPrice) tags.push(`均价¥${p.avgPrice}`);
+        return `- ${p.name}（${tags.join("，")}）`;
+      });
+      return {
+        content: `社区还没有关于「${store}」的消费情报，但高德显示附近有这些店：\n${lines.join("\n")}`,
+        meta: { count: 0, poiCount: pois.length, store },
+      };
+    }
     return {
-      content: data.summary || `还没有关于「${store}」的现成情报。`,
-      meta: { count: data.count || 0, store },
+      content: `还没有关于「${store}」的现成情报，高德也没有找到匹配的店铺。`,
+      meta: { count: 0, store },
     };
   }
 

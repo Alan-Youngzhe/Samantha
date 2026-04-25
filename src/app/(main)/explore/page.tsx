@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import MapView from "@/components/MapView";
-import { unknownStoreLocations } from "@/lib/seed-shops";
 import { getProfile } from "@/lib/memory";
 
 interface ShopPin {
@@ -18,7 +17,25 @@ interface ShopPin {
   posRate?: number;
   topComment?: string;
   hasCaution?: boolean;
+  address?: string;
+  amapRating?: number;
+  distance?: number;
 }
+
+interface PoiItem {
+  name: string;
+  lat: number;
+  lng: number;
+  category: string;
+  address: string;
+  rating?: number;
+  avgPrice?: number;
+  distance?: number;
+}
+
+// Default center: 龙华街道
+const DEFAULT_LAT = 31.1775;
+const DEFAULT_LNG = 121.4510;
 
 export default function ExplorePage() {
   const router = useRouter();
@@ -44,80 +61,117 @@ export default function ExplorePage() {
   useEffect(() => {
     async function loadPins() {
       try {
-        const res = await fetch("/api/reviews");
-        if (res.ok) {
-          const data = await res.json();
-          const reviews = data.reviews || [];
-          // Aggregate by store
-          const storeMap = new Map<string, { name: string; lat: number; lng: number; category: string; count: number; totalPrice: number; positive: number; neutral: number; negative: number; comments: string[] }>();
-          for (const r of reviews) {
-            if (!r.lat || !r.lng) continue;
-            const key = r.storeName;
-            if (!storeMap.has(key)) {
-              storeMap.set(key, { name: r.storeName, lat: r.lat, lng: r.lng, category: r.category, count: 0, totalPrice: 0, positive: 0, neutral: 0, negative: 0, comments: [] });
-            }
-            const s = storeMap.get(key)!;
-            s.count++;
-            s.totalPrice += r.price;
-            if (r.sentiment === "positive") s.positive++;
-            else if (r.sentiment === "negative") s.negative++;
-            else s.neutral++;
-            if (r.comment && s.comments.length < 3) s.comments.push(r.comment);
+        let centerLat = DEFAULT_LAT;
+        let centerLng = DEFAULT_LNG;
+
+        // Try to get user location
+        try {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000 })
+          );
+          centerLat = pos.coords.latitude;
+          centerLng = pos.coords.longitude;
+        } catch {
+          // use default
+        }
+
+        // Parallel fetch: POI (Amap) + Reviews (Supabase)
+        const [poiRes, reviewRes] = await Promise.all([
+          fetch(`/api/poi?lat=${centerLat}&lng=${centerLng}&radius=1500&types=050000|050500|060100`).then(r => r.ok ? r.json() : { pois: [] }).catch(() => ({ pois: [] })),
+          fetch("/api/reviews").then(r => r.ok ? r.json() : { reviews: [] }).catch(() => ({ reviews: [] })),
+        ]);
+
+        const poiList: PoiItem[] = poiRes.pois || [];
+        const reviews = reviewRes.reviews || [];
+
+        // Build review aggregation by store name
+        const reviewMap = new Map<string, { count: number; totalPrice: number; positive: number; neutral: number; negative: number; comments: string[]; lat: number; lng: number; category: string }>();
+        for (const r of reviews) {
+          if (!r.storeName) continue;
+          const key = r.storeName;
+          if (!reviewMap.has(key)) {
+            reviewMap.set(key, { count: 0, totalPrice: 0, positive: 0, neutral: 0, negative: 0, comments: [], lat: r.lat || 0, lng: r.lng || 0, category: r.category || "other" });
           }
-          const result: ShopPin[] = [];
-          storeMap.forEach((v, k) => {
-            const total = v.positive + v.neutral + v.negative;
-            const posRate = total > 0 ? Math.round((v.positive / total) * 100) : 0;
-            let temperature: ShopPin["temperature"] = "unknown";
-            if (v.count >= 8 && posRate >= 60) temperature = "hot";
-            else if (v.count >= 4 && posRate >= 50) temperature = "active";
-            else if (v.count >= 2 && posRate < 50) temperature = "caution";
-            else if (v.count >= 1) temperature = "active";
-            result.push({
-              id: k,
-              name: v.name,
-              lat: v.lat,
-              lng: v.lng,
-              category: v.category,
-              visitCount: v.count,
-              avgPrice: Math.round(v.totalPrice / v.count),
+          const s = reviewMap.get(key)!;
+          s.count++;
+          s.totalPrice += r.price || 0;
+          if (r.sentiment === "positive") s.positive++;
+          else if (r.sentiment === "negative") s.negative++;
+          else s.neutral++;
+          if (r.comment && s.comments.length < 3) s.comments.push(r.comment);
+        }
+
+        // Merge: start with POI as base, overlay reviews
+        const merged = new Map<string, ShopPin>();
+
+        for (const poi of poiList) {
+          if (!poi.lat || !poi.lng) continue;
+          merged.set(poi.name, {
+            id: poi.name,
+            name: poi.name,
+            lat: poi.lat,
+            lng: poi.lng,
+            category: poi.category,
+            visitCount: 0,
+            avgPrice: poi.avgPrice || 0,
+            temperature: "unknown",
+            address: poi.address,
+            amapRating: poi.rating,
+            distance: poi.distance,
+          });
+        }
+
+        // Overlay review data
+        reviewMap.forEach((rv, storeName) => {
+          const total = rv.positive + rv.neutral + rv.negative;
+          const posRate = total > 0 ? Math.round((rv.positive / total) * 100) : 0;
+          let temperature: ShopPin["temperature"] = "unknown";
+          if (rv.count >= 8 && posRate >= 60) temperature = "hot";
+          else if (rv.count >= 4 && posRate >= 50) temperature = "active";
+          else if (rv.count >= 2 && posRate < 50) temperature = "caution";
+          else if (rv.count >= 1) temperature = "active";
+
+          const existing = merged.get(storeName);
+          if (existing) {
+            existing.visitCount = rv.count;
+            existing.avgPrice = rv.count > 0 ? Math.round(rv.totalPrice / rv.count) : existing.avgPrice;
+            existing.temperature = temperature;
+            existing.posRate = posRate;
+            existing.topComment = rv.comments[0];
+            existing.hasCaution = rv.negative > 0 && total > 0 && (rv.negative / total) > 0.3;
+          } else if (rv.lat && rv.lng) {
+            merged.set(storeName, {
+              id: storeName,
+              name: storeName,
+              lat: rv.lat,
+              lng: rv.lng,
+              category: rv.category,
+              visitCount: rv.count,
+              avgPrice: rv.count > 0 ? Math.round(rv.totalPrice / rv.count) : 0,
               temperature,
               posRate,
-              topComment: v.comments[0],
-              hasCaution: v.negative > 0 && total > 0 && (v.negative / total) > 0.3,
+              topComment: rv.comments[0],
+              hasCaution: rv.negative > 0 && total > 0 && (rv.negative / total) > 0.3,
             });
-          });
-          // Add unknown stores as gray pins
-          const knownNames = new Set(result.map((p: ShopPin) => p.name));
-          for (const u of unknownStoreLocations) {
-            if (!knownNames.has(u.storeName)) {
-              result.push({
-                id: u.storeName,
-                name: u.storeName,
-                lat: u.lat,
-                lng: u.lng,
-                category: u.category,
-                visitCount: 0,
-                avgPrice: 0,
-                temperature: "unknown",
-              });
+          }
+        });
+
+        const result = Array.from(merged.values());
+
+        // Mark shops user has visited
+        const profile = getProfile();
+        if (profile) {
+          const visitedLocations = new Set(
+            (profile.spendings || []).filter((s) => s.location).map((s) => s.location!)
+          );
+          for (const pin of result) {
+            if (visitedLocations.has(pin.name)) {
+              pin.temperature = "visited";
             }
           }
-          // Mark shops user has visited (from spending records)
-          const profile = getProfile();
-          if (profile) {
-            const spendings = profile.spendings || [];
-            const visitedLocations = new Set(
-              spendings.filter((s) => s.location).map((s) => s.location!)
-            );
-            for (const pin of result) {
-              if (visitedLocations.has(pin.name)) {
-                pin.temperature = "visited";
-              }
-            }
-          }
-          setPins(result);
         }
+
+        setPins(result);
       } catch (e) {
         console.error("Failed to load pins:", e);
       } finally {
@@ -165,7 +219,7 @@ export default function ExplorePage() {
           </div>
         </div>
         <p className="mt-2 text-[11px] text-muted leading-relaxed">
-          地图上的点来自大家聊到的真实消费记录，也包括你自己的消费足迹。颜色代表口碑，不是广告。
+          地图上的店铺来自高德实时数据，颜色来自大家聊到的真实消费记录。颜色代表口碑，不是广告。
         </p>
       </div>
 
@@ -194,6 +248,11 @@ export default function ExplorePage() {
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-semibold text-foreground">{selectedPin.name}</h3>
+                {selectedPin.amapRating && selectedPin.amapRating > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-[#D4A853]/10 text-[#D4A853]">
+                    {selectedPin.amapRating}分
+                  </span>
+                )}
                 {selectedPin.posRate != null && selectedPin.visitCount >= 3 && (
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
                     selectedPin.posRate >= 70 ? "bg-[#7CAF6B]/10 text-[#7CAF6B]"
@@ -211,34 +270,59 @@ export default function ExplorePage() {
                 ✕
               </button>
             </div>
+            {selectedPin.address && (
+              <p className="text-[11px] text-muted mb-2">{selectedPin.address}</p>
+            )}
             <div className="flex gap-3 mb-2">
-              <div className="text-center">
-                <p className="text-lg font-bold text-foreground">¥{selectedPin.avgPrice}</p>
-                <p className="text-[10px] text-muted">均价</p>
-              </div>
-              <div className="text-center">
-                <p className="text-lg font-bold text-foreground">{selectedPin.visitCount}</p>
-                <p className="text-[10px] text-muted">条情报</p>
-              </div>
+              {selectedPin.avgPrice > 0 && (
+                <div className="text-center">
+                  <p className="text-lg font-bold text-foreground">¥{selectedPin.avgPrice}</p>
+                  <p className="text-[10px] text-muted">均价</p>
+                </div>
+              )}
+              {selectedPin.visitCount > 0 && (
+                <div className="text-center">
+                  <p className="text-lg font-bold text-foreground">{selectedPin.visitCount}</p>
+                  <p className="text-[10px] text-muted">条情报</p>
+                </div>
+              )}
               <div className="text-center">
                 <p className="text-lg font-bold text-foreground">{selectedPin.category}</p>
                 <p className="text-[10px] text-muted">品类</p>
               </div>
+              {selectedPin.distance != null && (
+                <div className="text-center">
+                  <p className="text-lg font-bold text-foreground">{selectedPin.distance}m</p>
+                  <p className="text-[10px] text-muted">距你</p>
+                </div>
+              )}
             </div>
             {selectedPin.hasCaution && selectedPin.visitCount >= 3 && (
-              <p className="text-[11px] text-[#E8564A] mb-2">⚠ 有人踩过雷</p>
+              <p className="text-[11px] text-[#E8564A] mb-2">有人踩过雷</p>
             )}
             {selectedPin.topComment && selectedPin.visitCount >= 3 && (
               <p className="text-[11px] text-text-secondary leading-relaxed mb-2 border-l-2 border-[#D4A853]/30 pl-2">
-                "{selectedPin.topComment}"
+                &ldquo;{selectedPin.topComment}&rdquo;
               </p>
             )}
-            <a
-              href={`/explore/${encodeURIComponent(selectedPin.id)}`}
-              className="block text-center text-xs text-accent font-medium py-2 rounded-xl border border-accent/20 hover:bg-accent/5 transition-colors"
-            >
-              查看店铺档案 →
-            </a>
+            {selectedPin.visitCount > 0 ? (
+              <a
+                href={`/explore/${encodeURIComponent(selectedPin.id)}`}
+                className="block text-center text-xs text-accent font-medium py-2 rounded-xl border border-accent/20 hover:bg-accent/5 transition-colors"
+              >
+                查看店铺档案 →
+              </a>
+            ) : (
+              <button
+                onClick={() => {
+                  sessionStorage.setItem("samantha_prefill", `${selectedPin.name}怎么样？`);
+                  router.push("/sami");
+                }}
+                className="w-full text-center text-xs text-accent font-medium py-2 rounded-xl border border-accent/20 hover:bg-accent/5 transition-colors"
+              >
+                问问 Samantha →
+              </button>
+            )}
           </div>
         </div>
       ) : (
@@ -250,9 +334,10 @@ export default function ExplorePage() {
             <p className="text-xs text-[#F5E6DA] leading-relaxed">
               {(() => {
                 const visitedCount = pins.filter((p) => p.temperature === "visited").length;
+                const reviewedCount = pins.filter((p) => p.visitCount > 0).length;
                 if (pins.length === 0) return "我对这座城市还很陌生。你每次带我去一个新地方，我就多认识一点。";
-                if (visitedCount > 0) return `这片区域我已经记住了 ${pins.length} 家店，其中 ${visitedCount} 家是你真的去过的。地图上的点来自大家聊到的消费记录，也包括你的足迹。长按空白处可以直接问我。`;
-                return `这里现在有 ${pins.length} 家店被我记下了。地图上的信息来自大家聊到的真实消费记录。点开店铺档案，或者长按地图空白处问我这附近怎么样。`;
+                if (visitedCount > 0) return `附近有 ${pins.length} 家店，其中 ${reviewedCount} 家有消费情报，${visitedCount} 家是你去过的。点开看看，或者长按空白处问我。`;
+                return `附近有 ${pins.length} 家店，${reviewedCount} 家有消费情报。地图上的信息来自大家聊到的真实消费记录。长按地图空白处可以问我。`;
               })()}
             </p>
           </div>
